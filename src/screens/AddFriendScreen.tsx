@@ -38,12 +38,12 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
 
   const handleSearch = async () => {
     if (!searchText.trim()) {
-      Alert.alert('Error', 'Please enter a username or email');
+      Alert.alert('Required', 'Please enter a username or email');
       return;
     }
 
     if (searchType === 'email' && !validateEmail(searchText)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert('Invalid Email', 'Please enter a valid email address');
       return;
     }
 
@@ -59,17 +59,17 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
       }
 
       if (!foundUser) {
-        Alert.alert('Not Found', `No user found with that ${searchType}`);
+        Alert.alert('Not Found', `No journalist found with that ${searchType}`);
         return;
       }
 
       if (foundUser.id === currentUser?.id) {
-        Alert.alert('Error', "You can't send a friend request to yourself");
+        Alert.alert('Invalid', "You can't connect with yourself");
         return;
       }
 
       if (currentUser?.friends.includes(foundUser.id)) {
-        Alert.alert('Already Friends', `You're already friends with ${foundUser.name}`);
+        Alert.alert('Already Connected', `You're already connected with ${foundUser.name}`);
         return;
       }
 
@@ -82,31 +82,31 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
 
       if (existingRequest) {
         if (existingRequest.status === 'pending') {
-          Alert.alert('Pending Request', 'A friend request is already pending');
+          Alert.alert('Pending', 'A connection request is already pending');
         } else {
-          Alert.alert('Request Exists', 'A friend request already exists');
+          Alert.alert('Exists', 'A connection request already exists');
         }
         return;
       }
 
       // Show confirmation
       Alert.alert(
-        'Send Friend Request',
-        `Send friend request to ${foundUser.name} (@${foundUser.username})?`,
+        'Send Connection Request',
+        `Connect with ${foundUser.name} (@${foundUser.username})?`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
-            text: 'Send',
+            text: 'Send Request',
             onPress: async () => {
               try {
                 await database.createFriendRequest(currentUser!.id, foundUser!.id);
                 Alert.alert(
-                  'Success',
-                  `Friend request sent to ${foundUser!.name}`,
+                  'Request Sent',
+                  `Connection request sent to ${foundUser!.name}`,
                   [{ text: 'OK', onPress: () => setSearchText('') }]
                 );
               } catch (error: any) {
-                Alert.alert('Error', error.message || 'Failed to send friend request');
+                Alert.alert('Error', error.message || 'Failed to send request');
               }
             },
           },
@@ -125,20 +125,26 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: colors.text }]}>Add Friend</Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>Build Your Network</Text>
+          <Text style={[styles.subtitle, { color: colors.text }]}>
+            Connect with journalists and expand your news sources
+          </Text>
+        </View>
         
-        <View style={styles.searchTypeContainer}>
+        {/* Search Type Tabs */}
+        <View style={styles.tabs}>
           <TouchableOpacity
             style={[
-              styles.searchTypeButton,
-              searchType === 'username' && styles.searchTypeButtonActive,
-              { borderColor: colors.border },
+              styles.tab,
+              searchType === 'username' && [styles.tabActive, { borderColor: colors.accent }],
             ]}
             onPress={() => setSearchType('username')}
           >
             <Text
               style={[
-                styles.searchTypeText,
+                styles.tabText,
                 { color: searchType === 'username' ? colors.accent : colors.text },
               ]}
             >
@@ -148,15 +154,14 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
           
           <TouchableOpacity
             style={[
-              styles.searchTypeButton,
-              searchType === 'email' && styles.searchTypeButtonActive,
-              { borderColor: colors.border },
+              styles.tab,
+              searchType === 'email' && [styles.tabActive, { borderColor: colors.accent }],
             ]}
             onPress={() => setSearchType('email')}
           >
             <Text
               style={[
-                styles.searchTypeText,
+                styles.tabText,
                 { color: searchType === 'email' ? colors.accent : colors.text },
               ]}
             >
@@ -165,52 +170,63 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
           </TouchableOpacity>
         </View>
 
-        <View style={styles.inputContainer}>
+        {/* Search Input */}
+        <View style={styles.searchSection}>
           <TextInput
             style={[
-              styles.input,
+              styles.searchInput,
               {
-                backgroundColor: colors.muted,
+                backgroundColor: colors.secondary,
                 color: colors.text,
                 borderColor: colors.border,
               },
             ]}
             placeholder={`Enter ${searchType}`}
-            placeholderTextColor={colors.text + '80'}
+            placeholderTextColor={colors.text + '60'}
             value={searchText}
             onChangeText={setSearchText}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType={searchType === 'email' ? 'email-address' : 'default'}
           />
+          
+          <TouchableOpacity
+            style={[
+              styles.searchButton,
+              { backgroundColor: colors.accent },
+              isLoading && styles.buttonDisabled,
+            ]}
+            onPress={handleSearch}
+            disabled={isLoading}
+          >
+            <Text style={styles.searchButtonText}>
+              {isLoading ? '...' : '🔍'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.searchButton,
-            { backgroundColor: colors.accent },
-            isLoading && styles.buttonDisabled,
-          ]}
-          onPress={handleSearch}
-          disabled={isLoading}
-        >
-          <Text style={styles.searchButtonText}>
-            {isLoading ? 'Searching...' : 'Search'}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={[styles.infoBox, { backgroundColor: colors.muted }]}>
+        {/* Info Cards */}
+        <View style={[styles.infoCard, { backgroundColor: colors.secondary }]}>
+          <Text style={styles.infoIcon}>🌐</Text>
           <Text style={[styles.infoTitle, { color: colors.text }]}>
-            How to add friends:
+            Why Build a Network?
           </Text>
-          <Text style={[styles.infoText, { color: colors.text }]}>
-            • Search by their username or email
-          </Text>
-          <Text style={[styles.infoText, { color: colors.text }]}>
-            • Send them a friend request
-          </Text>
-          <Text style={[styles.infoText, { color: colors.text }]}>
-            • Once accepted, you can send newsflashes directly to them
+          <View style={styles.infoList}>
+            <Text style={[styles.infoItem, { color: colors.text }]}>
+              • Get breaking news from trusted sources
+            </Text>
+            <Text style={[styles.infoItem, { color: colors.text }]}>
+              • Share your headlines with specific journalists
+            </Text>
+            <Text style={[styles.infoItem, { color: colors.text }]}>
+              • Create your personal news ecosystem
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.tipCard, { backgroundColor: colors.muted }]}>
+          <Text style={[styles.tipText, { color: colors.text }]}>
+            💡 <Text style={styles.tipBold}>Pro tip:</Text> Start by connecting with journalists in your field of interest
           </Text>
         </View>
       </ScrollView>
@@ -223,66 +239,105 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: Spacing.md,
+    padding: Spacing.lg,
+  },
+  header: {
+    marginBottom: Spacing.xl,
   },
   title: {
-    ...Typography.h2,
-    marginBottom: Spacing.lg,
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: Spacing.xs,
   },
-  searchTypeContainer: {
+  subtitle: {
+    fontSize: 16,
+    opacity: 0.7,
+    lineHeight: 22,
+  },
+  tabs: {
     flexDirection: 'row',
     marginBottom: Spacing.lg,
-    gap: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
   },
-  searchTypeButton: {
+  tab: {
     flex: 1,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.medium,
-    borderWidth: 1,
+    paddingVertical: Spacing.md,
     alignItems: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
   },
-  searchTypeButtonActive: {
-    borderColor: Colors.light.accent,
-    backgroundColor: Colors.light.accent + '10',
+  tabActive: {
+    borderBottomWidth: 3,
   },
-  searchTypeText: {
-    ...Typography.body,
+  tabText: {
+    fontSize: 16,
     fontWeight: '600',
   },
-  inputContainer: {
-    marginBottom: Spacing.md,
+  searchSection: {
+    flexDirection: 'row',
+    marginBottom: Spacing.xl,
   },
-  input: {
-    borderRadius: BorderRadius.medium,
-    padding: Spacing.md,
-    fontSize: 16,
+  searchInput: {
+    flex: 1,
     borderWidth: 1,
+    borderRadius: BorderRadius.medium,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    fontSize: 16,
+    marginRight: Spacing.sm,
   },
   searchButton: {
-    paddingVertical: Spacing.md,
+    width: 50,
     borderRadius: BorderRadius.medium,
     alignItems: 'center',
-    marginBottom: Spacing.xl,
+    justifyContent: 'center',
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   searchButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 20,
   },
-  infoBox: {
-    padding: Spacing.md,
-    borderRadius: BorderRadius.medium,
+  infoCard: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.large,
+    marginBottom: Spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  infoIcon: {
+    fontSize: 48,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
   },
   infoTitle: {
-    ...Typography.body,
-    fontWeight: 'bold',
-    marginBottom: Spacing.sm,
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: Spacing.md,
   },
-  infoText: {
-    ...Typography.caption,
-    marginBottom: Spacing.xs,
+  infoList: {
+    gap: Spacing.sm,
+  },
+  infoItem: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  tipCard: {
+    padding: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    flexDirection: 'row',
+  },
+  tipText: {
+    fontSize: 14,
+    lineHeight: 20,
+    flex: 1,
+  },
+  tipBold: {
+    fontWeight: '600',
   },
 }); 

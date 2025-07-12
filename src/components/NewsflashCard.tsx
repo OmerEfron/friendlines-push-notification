@@ -26,50 +26,35 @@ export const NewsflashCard: React.FC<NewsflashCardProps> = ({
   const colors = isDarkMode ? Colors.dark : Colors.light;
 
   const handlePress = () => {
-    // Navigate to full article view (future feature)
     navigation.navigate('Profile', { userId: author.id });
   };
 
-  // For featured articles (first in feed)
+  // For featured/top article
   if (isFeatured) {
     return (
       <TouchableOpacity 
         style={[styles.featuredContainer, { backgroundColor: colors.secondary }]}
         onPress={handlePress}
-        activeOpacity={0.8}
+        activeOpacity={0.7}
       >
         <Image
-          source={{ uri: `https://source.unsplash.com/800x400/?news,breaking,${newsflash.id}` }}
+          source={{ uri: `https://source.unsplash.com/600x300/?news,breaking,${newsflash.id}` }}
           style={styles.featuredImage}
         />
         <View style={styles.featuredContent}>
-          {/* Category tags */}
-          <View style={styles.categoryRow}>
-            {groups.map(group => (
-              <View
-                key={`group-${group.id}`}
-                style={[styles.categoryTag, { backgroundColor: group.color }]}
-              >
-                <Text style={styles.categoryText}>{group.name.toUpperCase()}</Text>
-              </View>
-            ))}
-            <Text style={[styles.breakingBadge, { color: colors.accent }]}>
-              BREAKING
+          {groups.length > 0 && (
+            <Text style={[styles.featuredCategory, { color: groups[0].color }]}>
+              {groups[0].name.toUpperCase()}
             </Text>
-          </View>
-
-          {/* Headline */}
+          )}
           <Text style={[styles.featuredHeadline, { color: colors.text }]}>
             {newsflash.text}
           </Text>
-
-          {/* Byline */}
-          <View style={styles.byline}>
-            <Text style={[styles.bylineText, { color: colors.text }]}>
-              By <Text style={styles.authorName}>{author.name}</Text>
+          <View style={styles.featuredMeta}>
+            <Text style={[styles.featuredAuthor, { color: colors.text }]}>
+              {author.name}
             </Text>
-            <Text style={[styles.dot, { color: colors.text }]}> • </Text>
-            <Text style={[styles.timestamp, { color: colors.text }]}>
+            <Text style={[styles.featuredTime, { color: colors.text }]}>
               {timeAgo(newsflash.created)}
             </Text>
           </View>
@@ -78,44 +63,42 @@ export const NewsflashCard: React.FC<NewsflashCardProps> = ({
     );
   }
 
-  // Regular news card (side-by-side layout)
+  // Compact news card (Ynet style)
   return (
     <TouchableOpacity 
-      style={[styles.container, { backgroundColor: colors.secondary }]}
+      style={[styles.compactContainer, { backgroundColor: colors.secondary }]}
       onPress={handlePress}
-      activeOpacity={0.8}
+      activeOpacity={0.7}
     >
-      <View style={styles.contentSection}>
-        {/* Category */}
-        {groups.length > 0 && (
-          <Text style={[styles.category, { color: groups[0].color }]}>
-            {groups[0].name.toUpperCase()}
-          </Text>
-        )}
-
-        {/* Headline */}
-        <Text 
-          style={[styles.headline, { color: colors.text }]}
-          numberOfLines={3}
-        >
-          {newsflash.text}
+      {/* Category label at top */}
+      {groups.length > 0 && (
+        <Text style={[styles.compactCategory, { color: groups[0].color }]}>
+          {groups[0].name.toUpperCase()}
         </Text>
+      )}
+      
+      {/* Headline */}
+      <Text 
+        style={[styles.compactHeadline, { color: colors.text }]}
+        numberOfLines={3}
+      >
+        {newsflash.text}
+      </Text>
 
-        {/* Meta info */}
-        <View style={styles.metaRow}>
-          <Text style={[styles.authorSmall, { color: colors.text }]}>
-            {author.name}
-          </Text>
-          <Text style={[styles.timeSmall, { color: colors.text }]}>
-            {timeAgo(newsflash.created)}
-          </Text>
-        </View>
+      {/* Bottom row with author and time */}
+      <View style={styles.compactMeta}>
+        <Text style={[styles.compactAuthor, { color: colors.text }]}>
+          {author.name}
+        </Text>
+        <Text style={[styles.compactTime, { color: colors.text }]}>
+          {timeAgo(newsflash.created)}
+        </Text>
       </View>
 
-      {/* Thumbnail */}
+      {/* Small thumbnail on the right */}
       <Image
-        source={{ uri: `https://source.unsplash.com/200x150/?news,${newsflash.id}` }}
-        style={styles.thumbnail}
+        source={{ uri: `https://source.unsplash.com/120x80/?news,${newsflash.id}` }}
+        style={styles.compactThumbnail}
       />
     </TouchableOpacity>
   );
@@ -124,116 +107,94 @@ export const NewsflashCard: React.FC<NewsflashCardProps> = ({
 const styles = StyleSheet.create({
   // Featured article styles
   featuredContainer: {
-    marginBottom: Spacing.lg,
-    borderRadius: BorderRadius.medium,
+    marginBottom: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e5e5',
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
   },
   featuredImage: {
     width: '100%',
-    height: 220,
+    height: 180,
   },
   featuredContent: {
-    padding: Spacing.lg,
+    padding: 12,
   },
-  categoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  categoryTag: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 3,
-    marginRight: Spacing.sm,
-  },
-  categoryText: {
+  featuredCategory: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#fff',
-    letterSpacing: 0.5,
-  },
-  breakingBadge: {
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.3,
+    marginBottom: 4,
   },
   featuredHeadline: {
-    fontSize: 24,
-    fontWeight: '700',
-    lineHeight: 32,
-    marginBottom: Spacing.sm,
-    fontFamily: 'System',
-  },
-  byline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  bylineText: {
-    fontSize: 14,
-    opacity: 0.7,
-  },
-  authorName: {
-    fontWeight: '600',
-  },
-  dot: {
-    opacity: 0.5,
-  },
-  timestamp: {
-    fontSize: 14,
-    opacity: 0.7,
-  },
-
-  // Regular article styles
-  container: {
-    flexDirection: 'row',
-    marginBottom: Spacing.md,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.medium,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  contentSection: {
-    flex: 1,
-    marginRight: Spacing.md,
-  },
-  category: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginBottom: Spacing.xs,
-  },
-  headline: {
     fontSize: 18,
-    fontWeight: '600',
-    lineHeight: 24,
-    marginBottom: Spacing.sm,
-    fontFamily: 'System',
+    fontWeight: '700',
+    lineHeight: 22,
+    marginBottom: 6,
   },
-  metaRow: {
+  featuredMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  authorSmall: {
-    fontSize: 13,
+  featuredAuthor: {
+    fontSize: 12,
     opacity: 0.7,
   },
-  timeSmall: {
-    fontSize: 12,
+  featuredTime: {
+    fontSize: 11,
     opacity: 0.6,
   },
-  thumbnail: {
-    width: 100,
+
+  // Compact card styles (Ynet-like)
+  compactContainer: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e5e5',
+    position: 'relative',
+  },
+  compactCategory: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    marginBottom: 2,
+    position: 'absolute',
+    top: 12,
+    left: 12,
+  },
+  compactHeadline: {
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 20,
+    marginTop: 16,
+    marginBottom: 4,
+    paddingRight: 130,
+    flex: 1,
+  },
+  compactMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    right: 140,
+  },
+  compactAuthor: {
+    fontSize: 11,
+    opacity: 0.6,
+  },
+  compactTime: {
+    fontSize: 11,
+    opacity: 0.5,
+  },
+  compactThumbnail: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    width: 120,
     height: 80,
-    borderRadius: BorderRadius.small,
+    borderRadius: 4,
     backgroundColor: '#f0f0f0',
   },
 }); 

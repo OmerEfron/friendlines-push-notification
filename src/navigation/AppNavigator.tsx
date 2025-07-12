@@ -2,7 +2,8 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View } from 'react-native';
+import { Text, View, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LoginScreen } from '../screens/LoginScreen';
 import { FeedScreen } from '../screens/FeedScreen';
 import { CreateNewsflashScreen } from '../screens/CreateNewsflashScreen';
@@ -28,13 +29,14 @@ const TabIcon = ({ name, focused, color }: { name: string; focused: boolean; col
   
   return (
     <View style={{ alignItems: 'center' }}>
-      <Text style={{ fontSize: focused ? 24 : 20 }}>{icons[name] || '❓'}</Text>
+      <Text style={{ fontSize: focused ? 22 : 18 }}>{icons[name] || '❓'}</Text>
     </View>
   );
 };
 
 const MainTabs = ({ isDarkMode, onNewsflashCreated }: AppNavigatorProps) => {
   const colors = isDarkMode ? Colors.dark : Colors.light;
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
@@ -47,13 +49,19 @@ const MainTabs = ({ isDarkMode, onNewsflashCreated }: AppNavigatorProps) => {
         tabBarStyle: {
           backgroundColor: colors.secondary,
           borderTopColor: colors.border,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
+          height: Platform.OS === 'ios' ? 60 : 56,
+          paddingBottom: Platform.OS === 'ios' ? insets.bottom : 5,
+          paddingTop: 5,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 3,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '600',
+          marginTop: -2,
         },
         headerShown: false,
       })}

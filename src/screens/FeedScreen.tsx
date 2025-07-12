@@ -60,7 +60,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
       );
     }
     
-    // Always sort by newest first for news sites
+    // Always sort by newest first
     filtered.sort((a, b) => b.created - a.created);
     
     return filtered;
@@ -94,7 +94,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
 
   // Section navigation
   const sections = [
-    { id: 'all', name: 'Top Stories', icon: '🔥' },
+    { id: 'all', name: 'ראשי', icon: '🏠' },
     ...groups.filter(g => currentUser?.groups.includes(g.id)).map(g => ({
       id: g.id.toString(),
       name: g.name,
@@ -104,43 +104,42 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* News Header */}
+      {/* Compact Header */}
       <View style={[styles.header, { backgroundColor: colors.secondary }]}>
         <Text style={[styles.logoText, { color: colors.accent }]}>FRIENDLINES</Text>
-        <Text style={[styles.tagline, { color: colors.text }]}>
-          Your Personal News Network
-        </Text>
       </View>
 
       {/* Section Navigation */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={[styles.sectionNav, { backgroundColor: colors.secondary }]}
-        contentContainerStyle={styles.sectionNavContent}
-      >
-        {sections.map(section => (
-          <TouchableOpacity
-            key={section.id}
-            style={[
-              styles.sectionButton,
-              selectedSection === section.id && styles.sectionButtonActive,
-              selectedSection === section.id && { borderBottomColor: colors.accent },
-            ]}
-            onPress={() => setSelectedSection(section.id)}
-          >
-            <Text style={styles.sectionIcon}>{section.icon}</Text>
-            <Text
+      <View style={[styles.sectionNav, { backgroundColor: colors.secondary }]}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.sectionNavContent}
+        >
+          {sections.map(section => (
+            <TouchableOpacity
+              key={section.id}
               style={[
-                styles.sectionText,
-                { color: selectedSection === section.id ? colors.accent : colors.text },
+                styles.sectionButton,
+                selectedSection === section.id && styles.sectionButtonActive,
               ]}
+              onPress={() => setSelectedSection(section.id)}
             >
-              {section.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Text
+                style={[
+                  styles.sectionText,
+                  { 
+                    color: selectedSection === section.id ? colors.accent : colors.text,
+                    fontWeight: selectedSection === section.id ? '700' : '400',
+                  },
+                ]}
+              >
+                {section.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* News Feed */}
       <FlatList
@@ -157,25 +156,13 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📰</Text>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              No News Yet
-            </Text>
             <Text style={[styles.emptyText, { color: colors.text }]}>
-              Create a newsflash or wait for updates from your network
+              אין חדשות עדיין
             </Text>
           </View>
         }
-        ListHeaderComponent={
-          filteredNewsflashes.length > 3 ? (
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                {selectedSection === 'all' ? 'Latest Headlines' : 'Section News'}
-              </Text>
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            </View>
-          ) : null
-        }
+        ItemSeparatorComponent={() => null}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );
@@ -186,87 +173,50 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.light.accent,
   },
   logoText: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: 1,
     textAlign: 'center',
-  },
-  tagline: {
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 4,
-    opacity: 0.7,
-    letterSpacing: 0.5,
   },
   sectionNav: {
     borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
+    borderBottomColor: '#ddd',
   },
   sectionNavContent: {
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   sectionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    marginRight: Spacing.xs,
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    marginRight: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
   },
   sectionButtonActive: {
-    borderBottomWidth: 3,
-  },
-  sectionIcon: {
-    fontSize: 16,
-    marginRight: Spacing.xs,
+    backgroundColor: Colors.light.accent + '15',
   },
   sectionText: {
     fontSize: 14,
-    fontWeight: '600',
   },
   listContent: {
-    padding: Spacing.md,
-  },
-  sectionHeader: {
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: Spacing.sm,
-  },
-  divider: {
-    height: 1,
-    opacity: 0.2,
+    paddingBottom: 20,
   },
   emptyContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing.xl * 2,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: Spacing.md,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: Spacing.sm,
+    paddingVertical: 80,
   },
   emptyText: {
-    fontSize: 14,
-    opacity: 0.6,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.xl,
-    lineHeight: 20,
+    fontSize: 16,
+    opacity: 0.5,
   },
 }); 
