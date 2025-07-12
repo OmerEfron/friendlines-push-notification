@@ -70,29 +70,32 @@ export const NewsflashCard: React.FC<NewsflashCardProps> = ({
       onPress={handlePress}
       activeOpacity={0.7}
     >
-      {/* Category label at top */}
-      {groups.length > 0 && (
-        <Text style={[styles.compactCategory, { color: groups[0].color }]}>
-          {groups[0].name.toUpperCase()}
+      {/* Content area */}
+      <View style={styles.compactContent}>
+        {/* Category label at top */}
+        {groups.length > 0 && (
+          <Text style={[styles.compactCategory, { color: groups[0].color }]}>
+            {groups[0].name.toUpperCase()}
+          </Text>
+        )}
+        
+        {/* Headline */}
+        <Text 
+          style={[styles.compactHeadline, { color: colors.text }]}
+          numberOfLines={3}
+        >
+          {newsflash.text}
         </Text>
-      )}
-      
-      {/* Headline */}
-      <Text 
-        style={[styles.compactHeadline, { color: colors.text }]}
-        numberOfLines={3}
-      >
-        {newsflash.text}
-      </Text>
 
-      {/* Bottom row with author and time */}
-      <View style={styles.compactMeta}>
-        <Text style={[styles.compactAuthor, { color: colors.text }]}>
-          {author.name}
-        </Text>
-        <Text style={[styles.compactTime, { color: colors.text }]}>
-          {timeAgo(newsflash.created)}
-        </Text>
+        {/* Bottom row with author and time */}
+        <View style={styles.compactMeta}>
+          <Text style={[styles.compactAuthor, { color: colors.text }]}>
+            {author.name}
+          </Text>
+          <Text style={[styles.compactTime, { color: colors.text }]}>
+            {timeAgo(newsflash.created)}
+          </Text>
+        </View>
       </View>
 
       {/* Small thumbnail on the right */}
@@ -152,33 +155,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e5e5',
-    position: 'relative',
+    minHeight: 100,
+  },
+  compactContent: {
+    flex: 1,
+    paddingRight: 12,
+    justifyContent: 'space-between',
   },
   compactCategory: {
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.3,
     marginBottom: 2,
-    position: 'absolute',
-    top: 12,
-    left: 12,
   },
   compactHeadline: {
     fontSize: 15,
     fontWeight: '600',
     lineHeight: 20,
-    marginTop: 16,
     marginBottom: 4,
-    paddingRight: 130,
     flex: 1,
   },
   compactMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    position: 'absolute',
-    bottom: 12,
-    left: 12,
-    right: 140,
+    marginTop: 4,
   },
   compactAuthor: {
     fontSize: 11,
@@ -189,9 +189,6 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   compactThumbnail: {
-    position: 'absolute',
-    right: 12,
-    top: 12,
     width: 120,
     height: 80,
     borderRadius: 4,

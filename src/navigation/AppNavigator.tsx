@@ -49,8 +49,8 @@ const MainTabs = ({ isDarkMode, onNewsflashCreated }: AppNavigatorProps) => {
         tabBarStyle: {
           backgroundColor: colors.secondary,
           borderTopColor: colors.border,
-          height: Platform.OS === 'ios' ? 60 : 56,
-          paddingBottom: Platform.OS === 'ios' ? insets.bottom : 5,
+          height: Platform.OS === 'ios' ? 60 + insets.bottom : 56 + insets.bottom,
+          paddingBottom: insets.bottom,
           paddingTop: 5,
           elevation: 8,
           shadowColor: '#000',
