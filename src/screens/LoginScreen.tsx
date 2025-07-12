@@ -48,20 +48,18 @@ export const LoginScreen: React.FC = () => {
         const user = await database.login(username, password);
         if (user) {
           navigation.replace('Main');
-        } else {
-          Alert.alert('Error', 'Invalid username or password');
         }
       } else {
         // Register
         const user = await database.register(username, email, password, displayName);
         if (user) {
           navigation.replace('Main');
-        } else {
-          Alert.alert('Error', 'Registration failed. Username or email may already be taken.');
         }
       }
-    } catch (error) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } catch (error: any) {
+      console.error('Auth error:', error);
+      const message = error.message || 'Something went wrong. Please try again.';
+      Alert.alert('Error', message);
     } finally {
       setIsLoading(false);
     }

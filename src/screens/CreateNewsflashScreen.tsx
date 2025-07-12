@@ -9,8 +9,10 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { launchImageLibrary, ImagePickerResponse, MediaType, ImageLibraryOptions } from 'react-native-image-picker';
 import database from '../services/database';
 import { Colors, Spacing, Typography, BorderRadius } from '../constants/theme';
 import { User, Group } from '../types';
@@ -26,6 +28,7 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
 }) => {
   const navigation = useNavigation();
   const [text, setText] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [friends, setFriends] = useState<User[]>([]);
@@ -70,14 +73,67 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
     );
   };
 
+  const pickImage = async () => {
+    const options: ImageLibraryOptions = {
+      mediaType: 'photo' as MediaType,
+      quality: 0.8 as any,
+      includeBase64: false,
+      maxWidth: 1200,
+      maxHeight: 1200,
+    };
+
+    launchImageLibrary(options, (response: ImagePickerResponse) => {
+      console.log('Image picker response:', response);
+      
+      if (response.didCancel) {
+        console.log('User cancelled image picker');
+        return;
+      }
+      
+      if (response.errorCode) {
+        console.error('Image picker error:', response.errorCode, response.errorMessage);
+        
+        if (response.errorCode === 'permission') {
+          Alert.alert(
+            'Permission Needed 📸',
+            'Please allow access to your photos in Settings to add images to your posts.'
+          );
+        } else if (response.errorCode === 'others') {
+          Alert.alert(
+            'Oops! 😅',
+            response.errorMessage || 'Something went wrong while picking the image.'
+          );
+        }
+        return;
+      }
+
+      if (response.assets && response.assets[0]) {
+        const imageUri = response.assets[0].uri;
+        if (imageUri) {
+          console.log('Selected image:', imageUri);
+          setSelectedImage(imageUri);
+        }
+      }
+    });
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+  };
+
   const handleSubmit = async () => {
     if (!text.trim()) {
-      Alert.alert('Missing Headline', 'Please write your news headline');
+      Alert.alert('Oops! 🤔', 'Please write something fun to share!');
+      return;
+    }
+
+    if (text.trim().length < 10) {
+      Alert.alert('Too Short! 📝', 'Your message needs to be at least 10 characters long. Add more details!');
       return;
     }
 
     if (selectedGroups.length === 0 && selectedFriends.length === 0) {
-      Alert.alert('Select Audience', 'Please select at least one section or contact');
+      Alert.alert('Pick Your Friends! 👥', 'Please select at least one group or friend to share with');
       return;
     }
 
@@ -94,19 +150,21 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
         currentUser!.id,
         text.trim(),
         [], // sections - empty for now
-        recipients
+        recipients,
+        selectedImage || undefined
       );
 
       // Show notification
       onNewsflashCreated(
-        'Published!',
-        `Your headline has been published to ${selectedGroups.length} sections and ${selectedFriends.length} contacts.`
+        'Shared! 🎉',
+        `Your awesome update is live! Shared with ${selectedGroups.length} groups and ${selectedFriends.length} friends.`
       );
 
       // Navigate back
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', 'Failed to publish headline');
+      console.error('Create newsflash error:', error);
+      Alert.alert('Oops! 😅', 'Failed to share your update. Try again!');
     } finally {
       setIsLoading(false);
     }
@@ -123,16 +181,16 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Write Headline</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Share Something Fun</Text>
           <Text style={[styles.subtitle, { color: colors.text }]}>
-            Share breaking news with your network
+            Tell your friends what's on your mind! ✨
           </Text>
         </View>
 
-        {/* Headline Input */}
+        {/* Message Input */}
         <View style={styles.section}>
           <View style={styles.labelRow}>
-            <Text style={[styles.label, { color: colors.text }]}>Headline</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Your Thought</Text>
             <Text style={[styles.charCount, { color: colors.text }]}>
               {text.length}/180
             </Text>
@@ -146,7 +204,7 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
                 borderColor: colors.border,
               },
             ]}
-            placeholder="Enter your news headline..."
+            placeholder="What's going on? Share something awesome! 😊"
             placeholderTextColor={colors.text + '60'}
             value={text}
             onChangeText={setText}
@@ -154,8 +212,33 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
             maxLength={180}
           />
           <Text style={[styles.hint, { color: colors.text }]}>
-            Make it concise and attention-grabbing
+            Keep it fun and interesting! 🎉
           </Text>
+        </View>
+
+        {/* Image Picker */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>Add Photo (Optional)</Text>
+          
+          {selectedImage ? (
+            <View style={styles.imageContainer}>
+              <Image source={{ uri: selectedImage }} style={styles.selectedImage} />
+              <TouchableOpacity
+                style={[styles.removeImageButton, { backgroundColor: colors.error || '#e74c3c' }]}
+                onPress={removeImage}
+              >
+                <Text style={styles.removeImageText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.imagePickerButton, { borderColor: colors.border }]}
+              onPress={pickImage}
+            >
+              <Text style={[styles.imagePickerIcon, { color: colors.text }]}>📷</Text>
+              <Text style={[styles.imagePickerText, { color: colors.text }]}>Add Photo</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Distribution */}
@@ -267,7 +350,7 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
           disabled={isLoading}
         >
           <Text style={styles.publishButtonText}>
-            {isLoading ? 'Publishing...' : 'Publish Headline'}
+            {isLoading ? 'Sharing...' : 'Share It! 🚀'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -394,5 +477,48 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '700',
+  },
+  imageContainer: {
+    position: 'relative',
+    marginTop: 10,
+  },
+  selectedImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeImageText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  imagePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  imagePickerIcon: {
+    fontSize: 24,
+    marginRight: 8,
+  },
+  imagePickerText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

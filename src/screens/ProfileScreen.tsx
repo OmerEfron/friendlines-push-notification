@@ -8,8 +8,10 @@ import {
   ScrollView,
   Alert,
   FlatList,
+  Image,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, RouteProp, NavigationProp } from '@react-navigation/native';
+import { launchImageLibrary, ImagePickerResponse, MediaType, ImageLibraryOptions } from 'react-native-image-picker';
 import database from '../services/database';
 import { NewsflashCard } from '../components/NewsflashCard';
 import { Colors, Spacing, Typography, BorderRadius } from '../constants/theme';
@@ -17,11 +19,18 @@ import { User, Group, Newsflash } from '../types';
 
 interface ProfileScreenProps {
   isDarkMode: boolean;
+  route?: RouteProp<any>;
+  navigation?: NavigationProp<any>;
 }
 
-export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
-  const route = useRoute<any>();
-  const navigation = useNavigation();
+export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode, route: propRoute, navigation: propNavigation }) => {
+  const navRoute = useRoute<any>();
+  const navNavigation = useNavigation();
+  
+  // Use prop route/navigation if provided, otherwise use hooks
+  const route = propRoute || navRoute;
+  const navigation = propNavigation || navNavigation;
+  
   const userId = route.params?.userId;
   const isCurrentUser = route.params?.isCurrentUser || false;
 
@@ -48,6 +57,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
       profileUser = current;
     } else if (userId) {
       profileUser = await database.getUser(userId);
+    } else if (!isCurrentUser && !userId && current) {
+      // Default to current user if no params provided
+      profileUser = current;
     }
 
     if (profileUser) {
@@ -73,18 +85,72 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
       await database.updateUser(user.id, { bio: bio.trim() });
       setUser({ ...user, bio: bio.trim() });
       setIsEditingBio(false);
-      Alert.alert('Success', 'Bio updated successfully');
+      Alert.alert('Success! 🎉', 'Bio updated successfully');
     } catch (error) {
-      Alert.alert('Error', 'Failed to update bio');
+      Alert.alert('Oops! 😅', 'Failed to update bio');
     }
+  };
+
+  const pickProfilePicture = async () => {
+    if (!isCurrentUser) return;
+
+    const options: ImageLibraryOptions = {
+      mediaType: 'photo' as MediaType,
+      quality: 0.8 as any,
+      includeBase64: false,
+      maxWidth: 500,
+      maxHeight: 500,
+    };
+
+    launchImageLibrary(options, (response: ImagePickerResponse) => {
+      console.log('Profile picture picker response:', response);
+      
+      if (response.didCancel) {
+        console.log('User cancelled profile picture picker');
+        return;
+      }
+      
+      if (response.errorCode) {
+        console.error('Profile picture picker error:', response.errorCode, response.errorMessage);
+        
+        if (response.errorCode === 'permission') {
+          Alert.alert(
+            'Permission Needed 📸',
+            'Please allow access to your photos in Settings to change your profile picture.'
+          );
+        } else if (response.errorCode === 'others') {
+          Alert.alert(
+            'Oops! 😅',
+            response.errorMessage || 'Something went wrong while picking the image.'
+          );
+        }
+        return;
+      }
+
+      if (response.assets && response.assets[0]) {
+        const imageUri = response.assets[0].uri;
+        if (imageUri) {
+          console.log('Selected profile picture:', imageUri);
+          try {
+            // Update profile picture via API
+            database.updateUser(user!.id, { profilePicture: imageUri });
+            setUser({ ...user!, profilePicture: imageUri });
+            Alert.alert('Success! 🎉', 'Profile picture updated successfully');
+          } catch (error) {
+            console.error('Failed to update profile picture:', error);
+            Alert.alert('Oops! 😅', 'Failed to update profile picture');
+          }
+        }
+      }
+    });
   };
 
   const handleLogout = () => {
     Alert.alert(
-      'Logout',
+      'See You Later! 👋',
       'Are you sure you want to logout?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Stay', style: 'cancel' },
         {
           text: 'Logout',
           style: 'destructive',
@@ -139,7 +205,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
     >
       {/* Profile Header */}
       <View style={[styles.header, { backgroundColor: colors.secondary }]}>
-        <Text style={styles.avatar}>👤</Text>
+        <TouchableOpacity onPress={isCurrentUser ? pickProfilePicture : undefined} disabled={!isCurrentUser}>
+          {user.profilePicture ? (
+            <Image source={{ uri: user.profilePicture }} style={styles.profilePicture} />
+          ) : (
+            <Text style={styles.avatar}>👤</Text>
+          )}
+          {isCurrentUser && (
+            <View style={[styles.editProfilePictureOverlay, { backgroundColor: colors.accent + '80' }]}>
+              <Text style={styles.editProfilePictureText}>📷</Text>
+            </View>
+          )}
+        </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={[styles.name, { color: colors.text }]}>{user.displayName}</Text>
           <Text style={[styles.username, { color: colors.text }]}>@{user.username}</Text>
@@ -224,11 +301,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
       {/* User's Newsflashes */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          {isCurrentUser ? 'My Newsflashes' : 'Newsflashes'}
+          {isCurrentUser ? 'My Posts' : 'Posts'}
         </Text>
         {newsflashes.length === 0 ? (
           <Text style={[styles.emptyText, { color: colors.text }]}>
-            No newsflashes yet
+            No posts yet! Share something fun! 🎉
           </Text>
         ) : (
           newsflashes.map(item => (
@@ -362,5 +439,25 @@ const styles = StyleSheet.create({
     ...Typography.body,
     textAlign: 'center',
     marginTop: Spacing.xl,
+  },
+  profilePicture: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: Spacing.md,
+  },
+  editProfilePictureOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: Spacing.md,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editProfilePictureText: {
+    fontSize: 16,
+    color: '#fff',
   },
 }); 

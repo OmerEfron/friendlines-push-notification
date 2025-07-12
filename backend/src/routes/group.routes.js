@@ -1,111 +1,21 @@
 const express = require('express');
 const { body, param } = require('express-validator');
-const { db } = require('../config/database');
+const groupController = require('../controllers/group.controller');
 const { authenticateToken } = require('../middleware/auth.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const { upload, processImage, cleanupFile } = require('../middleware/upload.middleware');
-const NotificationService = require('../services/notification.service');
 
 const router = express.Router();
 
 // GET /api/v1/groups
-router.get('/', authenticateToken, (req, res) => {
-  try {
-    const groups = db.prepare(`
-      SELECT 
-        g.id,
-        g.name,
-        g.description,
-        g.profile_picture,
-        g.is_private,
-        g.created_at,
-        u.display_name as creator_name,
-        COUNT(DISTINCT gm.user_id) as member_count,
-        CASE 
-          WHEN gm2.user_id IS NOT NULL THEN 1
-          ELSE 0
-        END as is_member,
-        gm2.role as user_role
-      FROM groups g
-      INNER JOIN users u ON g.creator_id = u.id
-      LEFT JOIN group_members gm ON g.id = gm.group_id
-      LEFT JOIN group_members gm2 ON g.id = gm2.group_id AND gm2.user_id = ?
-      GROUP BY g.id
-      ORDER BY g.created_at DESC
-    `).all(req.user.id);
-
-    res.json({ groups });
-  } catch (error) {
-    console.error('Get groups error:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to fetch groups'
-    });
-  }
-});
+router.get('/', authenticateToken, groupController.getGroups.bind(groupController));
 
 // GET /api/v1/groups/:id
 router.get('/:id',
   authenticateToken,
   param('id').isInt().withMessage('Invalid group ID'),
   handleValidationErrors,
-  (req, res) => {
-    const groupId = req.params.id;
-
-    try {
-      // Get group details
-      const group = db.prepare(`
-        SELECT 
-          g.*,
-          u.display_name as creator_name,
-          CASE 
-            WHEN gm.user_id IS NOT NULL THEN 1
-            ELSE 0
-          END as is_member,
-          gm.role as user_role
-        FROM groups g
-        INNER JOIN users u ON g.creator_id = u.id
-        LEFT JOIN group_members gm ON g.id = gm.group_id AND gm.user_id = ?
-        WHERE g.id = ?
-      `).get(req.user.id, groupId);
-
-      if (!group) {
-        return res.status(404).json({
-          error: 'Not Found',
-          message: 'Group not found'
-        });
-      }
-
-      // Get group members
-      const members = db.prepare(`
-        SELECT 
-          u.id,
-          u.username,
-          u.display_name,
-          u.profile_picture,
-          gm.role,
-          gm.joined_at
-        FROM group_members gm
-        INNER JOIN users u ON gm.user_id = u.id
-        WHERE gm.group_id = ?
-        ORDER BY gm.role DESC, gm.joined_at ASC
-      `).all(groupId);
-
-      res.json({ 
-        group: {
-          ...group,
-          is_member: Boolean(group.is_member)
-        },
-        members 
-      });
-    } catch (error) {
-      console.error('Get group error:', error);
-      res.status(500).json({
-        error: 'Internal Server Error',
-        message: 'Failed to fetch group'
-      });
-    }
-  }
+  groupController.getGroup.bind(groupController)
 );
 
 // POST /api/v1/groups
@@ -130,52 +40,7 @@ router.post('/',
       .withMessage('isPrivate must be a boolean')
   ],
   handleValidationErrors,
-  (req, res) => {
-    const { name, description, isPrivate = false } = req.body;
-    const profilePicture = req.file?.processedPath;
-
-    db.serialize(() => {
-      try {
-        db.run('BEGIN TRANSACTION');
-
-        // Create group
-        const result = db.prepare(`
-          INSERT INTO groups (name, description, creator_id, profile_picture, is_private)
-          VALUES (?, ?, ?, ?, ?)
-        `).run(name, description, req.user.id, profilePicture, isPrivate ? 1 : 0);
-
-        const groupId = result.lastInsertRowid;
-
-        // Add creator as admin
-        db.prepare(`
-          INSERT INTO group_members (group_id, user_id, role)
-          VALUES (?, ?, 'admin')
-        `).run(groupId, req.user.id);
-
-        db.run('COMMIT');
-
-        // Get created group
-        const group = db.prepare(`
-          SELECT g.*, u.display_name as creator_name
-          FROM groups g
-          INNER JOIN users u ON g.creator_id = u.id
-          WHERE g.id = ?
-        `).get(groupId);
-
-        res.status(201).json({
-          message: 'Group created successfully',
-          group
-        });
-      } catch (error) {
-        db.run('ROLLBACK');
-        console.error('Create group error:', error);
-        res.status(500).json({
-          error: 'Internal Server Error',
-          message: 'Failed to create group'
-        });
-      }
-    });
-  }
+  groupController.createGroup.bind(groupController)
 );
 
 // PUT /api/v1/groups/:id
@@ -198,69 +63,7 @@ router.put('/:id',
       .withMessage('Description cannot exceed 200 characters')
   ],
   handleValidationErrors,
-  (req, res) => {
-    const groupId = req.params.id;
-    const { name, description } = req.body;
-    const profilePicture = req.file?.processedPath;
-
-    try {
-      // Check if user is admin
-      const membership = db.prepare(`
-        SELECT role FROM group_members 
-        WHERE group_id = ? AND user_id = ?
-      `).get(groupId, req.user.id);
-
-      if (!membership || membership.role !== 'admin') {
-        return res.status(403).json({
-          error: 'Forbidden',
-          message: 'Only group admins can update group details'
-        });
-      }
-
-      // Build update query
-      const updates = [];
-      const values = [];
-
-      if (name !== undefined) {
-        updates.push('name = ?');
-        values.push(name);
-      }
-      if (description !== undefined) {
-        updates.push('description = ?');
-        values.push(description);
-      }
-      if (profilePicture) {
-        updates.push('profile_picture = ?');
-        values.push(profilePicture);
-      }
-
-      if (updates.length === 0) {
-        return res.status(400).json({
-          error: 'Bad Request',
-          message: 'No fields to update'
-        });
-      }
-
-      updates.push('updated_at = CURRENT_TIMESTAMP');
-      values.push(groupId);
-
-      db.prepare(`
-        UPDATE groups 
-        SET ${updates.join(', ')}
-        WHERE id = ?
-      `).run(...values);
-
-      res.json({
-        message: 'Group updated successfully'
-      });
-    } catch (error) {
-      console.error('Update group error:', error);
-      res.status(500).json({
-        error: 'Internal Server Error',
-        message: 'Failed to update group'
-      });
-    }
-  }
+  groupController.updateGroup.bind(groupController)
 );
 
 // DELETE /api/v1/groups/:id

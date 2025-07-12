@@ -9,6 +9,8 @@ import { FeedScreen } from '../screens/FeedScreen';
 import { CreateNewsflashScreen } from '../screens/CreateNewsflashScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { AddFriendScreen } from '../screens/AddFriendScreen';
+import { FriendRequestsScreen } from '../screens/FriendRequestsScreen';
+import { CommentsScreen } from '../screens/CommentsScreen';
 import { Colors } from '../constants/theme';
 
 const Stack = createStackNavigator();
@@ -90,8 +92,9 @@ const MainTabs = ({ isDarkMode, onNewsflashCreated }: AppNavigatorProps) => {
       <Tab.Screen 
         name="Profile" 
         options={{ title: 'Profile' }}
+        initialParams={{ isCurrentUser: true }}
       >
-        {() => <ProfileScreen isDarkMode={isDarkMode} />}
+        {(props) => <ProfileScreen isDarkMode={isDarkMode} route={{ params: { isCurrentUser: true } }} navigation={props.navigation} />}
       </Tab.Screen>
     </Tab.Navigator>
   );
@@ -141,7 +144,27 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ isDarkMode, onNewsfl
             headerBackTitle: 'Back',
           }}
         >
-          {() => <ProfileScreen isDarkMode={isDarkMode} />}
+          {(props) => <ProfileScreen isDarkMode={isDarkMode} route={props.route} navigation={props.navigation} />}
+        </Stack.Screen>
+        
+        <Stack.Screen 
+          name="FriendRequests" 
+          options={{ 
+            title: 'Friend Requests',
+            headerBackTitle: 'Back',
+          }}
+        >
+          {() => <FriendRequestsScreen isDarkMode={isDarkMode} />}
+        </Stack.Screen>
+        
+        <Stack.Screen 
+          name="Comments" 
+          options={{ 
+            title: 'Comments',
+            headerBackTitle: 'Back',
+          }}
+        >
+          {() => <CommentsScreen isDarkMode={isDarkMode} />}
         </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>

@@ -8,7 +8,10 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import database from '../services/database';
+import socketService from '../services/socket';
 import { NewsflashCard } from '../components/NewsflashCard';
 import { Colors, Spacing, Typography } from '../constants/theme';
 import { Newsflash, User, Group } from '../types';
@@ -18,6 +21,7 @@ interface FeedScreenProps {
 }
 
 export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
+  const navigation = useNavigation<any>();
   const [newsflashes, setNewsflashes] = useState<Newsflash[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -74,6 +78,21 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
     return filtered;
   };
 
+  const handleLike = async (newsflashId: string) => {
+    try {
+      // TODO: Implement like API call
+      console.log('Like newsflash:', newsflashId);
+      // For now, just refresh the feed
+      await loadData();
+    } catch (error) {
+      console.error('Failed to like newsflash:', error);
+    }
+  };
+
+  const handleComment = (newsflashId: string) => {
+    navigation.navigate('Comments', { newsflashId });
+  };
+
   const renderNewsflash = ({ item, index }: { item: Newsflash; index: number }) => {
     const author = users.find(u => u.id === item.authorId);
     if (!author) return null;
@@ -96,6 +115,8 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
         friends={itemFriends}
         isDarkMode={isDarkMode}
         isFeatured={index === 0 && selectedSection === 'all'}
+        onLike={() => handleLike(item.id)}
+        onComment={() => handleComment(item.id)}
       />
     );
   };
@@ -113,7 +134,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
       {/* Compact Header */}
       <View style={[styles.header, { backgroundColor: colors.secondary }]}>
         <Text style={[styles.logoText, { color: colors.accent }]}>FRIENDLINES</Text>
@@ -167,14 +188,14 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: colors.text }]}>
-              אין חדשות עדיין
+              No posts yet! Share something fun! 🎉
             </Text>
           </View>
         }
         ItemSeparatorComponent={() => null}
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 

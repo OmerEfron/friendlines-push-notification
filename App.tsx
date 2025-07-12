@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, useColorScheme } from 'react-native';
+import { View, useColorScheme, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { InAppNotification } from './src/components/InAppNotification';
 import database from './src/services/database';
+import socketService from './src/services/socket';
 import { usePushNotifications } from './usePushNotifications';
 import pushNotificationService from './src/services/pushNotification';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,6 +26,21 @@ export default function App() {
   useEffect(() => {
     // Initialize database with mock data
     database.init();
+    
+    // Connect socket when app starts if authenticated
+    const connectSocket = async () => {
+      const authToken = await AsyncStorage.getItem('authToken');
+      if (authToken) {
+        await socketService.connect();
+      }
+    };
+    
+    connectSocket();
+    
+    // Clean up on unmount
+    return () => {
+      socketService.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -72,6 +88,28 @@ export default function App() {
     }
   }, [pushNotification]);
 
+  useEffect(() => {
+    // Set up socket event listeners
+    socketService.on('onNewsflash', (newsflash: any) => {
+      handleNewsflashCreated('New Newsflash! 📰', 'Someone shared something new!');
+    });
+
+    socketService.on('onFriendRequest', (request: any) => {
+      handleNewsflashCreated('Friend Request! 👋', 'Someone wants to be your friend!');
+    });
+
+    socketService.on('onComment', (comment: any) => {
+      handleNewsflashCreated('New Comment! 💬', 'Someone commented on your post!');
+    });
+
+    return () => {
+      // Clean up listeners
+      socketService.off('onNewsflash');
+      socketService.off('onFriendRequest');
+      socketService.off('onComment');
+    };
+  }, []);
+
   const handleNewsflashCreated = (title: string, message: string) => {
     setNotification({
       visible: true,
@@ -88,22 +126,24 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar
         style={isDarkMode ? 'light' : 'dark'}
+        backgroundColor={isDarkMode ? '#1a1a1a' : '#f5f5f5'}
+        translucent={false}
       />
       
-      <View style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: isDarkMode ? '#1a1a1a' : '#f5f5f5' }} edges={['top']}>
         <AppNavigator
           isDarkMode={isDarkMode}
           onNewsflashCreated={handleNewsflashCreated}
         />
-        
-        <InAppNotification
-          visible={notification.visible}
-          title={notification.title}
-          message={notification.message}
-          onDismiss={dismissNotification}
-          isDarkMode={isDarkMode}
-        />
-      </View>
+      </SafeAreaView>
+      
+      <InAppNotification
+        visible={notification.visible}
+        title={notification.title}
+        message={notification.message}
+        onDismiss={dismissNotification}
+        isDarkMode={isDarkMode}
+      />
     </SafeAreaProvider>
   );
 }

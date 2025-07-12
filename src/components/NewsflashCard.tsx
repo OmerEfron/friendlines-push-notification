@@ -12,6 +12,8 @@ interface NewsflashCardProps {
   friends?: User[];
   isDarkMode: boolean;
   isFeatured?: boolean;
+  onLike?: () => void;
+  onComment?: () => void;
 }
 
 export const NewsflashCard: React.FC<NewsflashCardProps> = ({
@@ -21,15 +23,21 @@ export const NewsflashCard: React.FC<NewsflashCardProps> = ({
   friends = [],
   isDarkMode,
   isFeatured = false,
+  onLike,
+  onComment,
 }) => {
   const navigation = useNavigation<any>();
   const colors = isDarkMode ? Colors.dark : Colors.light;
 
   const handlePress = () => {
+    navigation.navigate('Comments', { newsflashId: newsflash.id });
+  };
+
+  const handleAuthorPress = () => {
     navigation.navigate('Profile', { userId: author.id });
   };
 
-  // For featured/top article
+  // For featured/top post
   if (isFeatured) {
     return (
       <TouchableOpacity 
@@ -38,8 +46,9 @@ export const NewsflashCard: React.FC<NewsflashCardProps> = ({
         activeOpacity={0.7}
       >
         <Image
-          source={{ uri: newsflash.image || `https://source.unsplash.com/600x300/?news,breaking,${newsflash.id}` }}
+          source={{ uri: newsflash.image || `https://source.unsplash.com/600x300/?friends,fun,social,${newsflash.id}` }}
           style={styles.featuredImage}
+          resizeMode="cover"
         />
         <View style={styles.featuredContent}>
           {groups.length > 0 && (
@@ -51,12 +60,52 @@ export const NewsflashCard: React.FC<NewsflashCardProps> = ({
             {newsflash.content}
           </Text>
           <View style={styles.featuredMeta}>
-            <Text style={[styles.featuredAuthor, { color: colors.text }]}>
-              {author.displayName}
-            </Text>
+            <TouchableOpacity 
+              onPress={(e) => {
+                e.stopPropagation();
+                handleAuthorPress();
+              }} 
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.featuredAuthor, { color: colors.text }]}>
+                {author.displayName}
+              </Text>
+            </TouchableOpacity>
             <Text style={[styles.featuredTime, { color: colors.text }]}>
               {timeAgo(newsflash.createdAt.getTime())}
             </Text>
+          </View>
+          
+          {/* Interaction buttons */}
+          <View style={styles.featuredActions}>
+            <TouchableOpacity 
+              style={styles.actionButton} 
+              onPress={(e) => {
+                e.stopPropagation();
+                if (onLike) onLike();
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.actionIcon}>❤️</Text>
+              <Text style={[styles.actionText, { color: colors.text }]}>
+                {newsflash.likes}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.actionButton} 
+              onPress={(e) => {
+                e.stopPropagation();
+                if (onComment) onComment();
+                navigation.navigate('Comments', { newsflashId: newsflash.id });
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.actionIcon}>💬</Text>
+              <Text style={[styles.actionText, { color: colors.text }]}>
+                {newsflash.comments}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </TouchableOpacity>
@@ -89,20 +138,63 @@ export const NewsflashCard: React.FC<NewsflashCardProps> = ({
 
         {/* Bottom row with author and time */}
         <View style={styles.compactMeta}>
-          <Text style={[styles.compactAuthor, { color: colors.text }]}>
-            {author.displayName}
-          </Text>
-          <Text style={[styles.compactTime, { color: colors.text }]}>
-            {timeAgo(newsflash.createdAt.getTime())}
-          </Text>
+          <View style={styles.compactAuthorTime}>
+            <TouchableOpacity 
+              onPress={(e) => {
+                e.stopPropagation();
+                handleAuthorPress();
+              }} 
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.compactAuthor, { color: colors.text }]}>
+                {author.displayName}
+              </Text>
+            </TouchableOpacity>
+            <Text style={[styles.compactTime, { color: colors.text }]}>
+              {timeAgo(newsflash.createdAt.getTime())}
+            </Text>
+          </View>
+          
+          <View style={styles.compactActions}>
+            <TouchableOpacity 
+              style={styles.compactActionButton} 
+              onPress={(e) => {
+                e.stopPropagation();
+                if (onLike) onLike();
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.actionIcon}>❤️</Text>
+              <Text style={[styles.compactActionText, { color: colors.text }]}>
+                {newsflash.likes}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.compactActionButton} 
+              onPress={(e) => {
+                e.stopPropagation();
+                if (onComment) onComment();
+                navigation.navigate('Comments', { newsflashId: newsflash.id });
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.actionIcon}>💬</Text>
+              <Text style={[styles.compactActionText, { color: colors.text }]}>
+                {newsflash.comments}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
-      {/* Small thumbnail on the right */}
-      <Image
-        source={{ uri: newsflash.image || `https://source.unsplash.com/120x80/?news,${newsflash.id}` }}
-        style={styles.compactThumbnail}
-      />
+      {/* Small thumbnail on the right if image exists */}
+      {(newsflash.image || !newsflash.image) && (
+        <Image
+          source={{ uri: newsflash.image || `https://source.unsplash.com/120x80/?friends,fun,${newsflash.id}` }}
+          style={styles.compactThumbnail}
+        />
+      )}
     </TouchableOpacity>
   );
 };
@@ -193,5 +285,38 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 4,
     backgroundColor: '#f0f0f0',
+  },
+  featuredActions: {
+    flexDirection: 'row',
+    marginTop: 8,
+    gap: 16,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionIcon: {
+    fontSize: 16,
+  },
+  actionText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  compactAuthorTime: {
+    flex: 1,
+  },
+  compactActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  compactActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  compactActionText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 }); 
