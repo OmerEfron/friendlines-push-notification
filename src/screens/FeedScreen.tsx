@@ -37,7 +37,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
       setCurrentUser(user);
       const allUsers = await database.getUsers();
       const allGroups = await database.getGroups();
-      const userNewsflashes = await database.getNewsflashesForUser(user.id);
+      const userNewsflashes = await database.getNewsflashes(user.id);
       
       setUsers(allUsers);
       setGroups(allGroups);
@@ -55,28 +55,38 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
     let filtered = [...newsflashes];
     
     if (selectedSection !== 'all') {
-      filtered = filtered.filter(
-        n => n.groupIds && n.groupIds.includes(Number(selectedSection))
-      );
+      filtered = filtered.filter(n => {
+        // Check if this newsflash belongs to the selected group
+        // Since we're using recipients now, we need to check if group members are in recipients
+        const group = groups.find(g => g.id === selectedSection);
+        if (!group) return false;
+        
+        // Check if any group member is in the recipients
+        return n.recipients.some(recipientId => 
+          group.members.includes(recipientId)
+        );
+      });
     }
     
     // Always sort by newest first
-    filtered.sort((a, b) => b.created - a.created);
+    filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     
     return filtered;
   };
 
   const renderNewsflash = ({ item, index }: { item: Newsflash; index: number }) => {
-    const author = users.find(u => u.id === item.userId);
+    const author = users.find(u => u.id === item.authorId);
     if (!author) return null;
 
-    const itemGroups = item.groupIds
-      ? groups.filter(g => item.groupIds!.includes(g.id))
-      : [];
+    // Find groups that this newsflash was sent to
+    const itemGroups = groups.filter(g => 
+      item.recipients.some(recipientId => g.members.includes(recipientId))
+    );
     
-    const itemFriends = item.friendIds
-      ? users.filter(u => item.friendIds!.includes(u.id))
-      : [];
+    // Find individual friends this was sent to
+    const itemFriends = users.filter(u => 
+      item.recipients.includes(u.id)
+    );
 
     return (
       <NewsflashCard
@@ -94,8 +104,8 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
 
   // Section navigation
   const sections = [
-    { id: 'all', name: 'ראשי', icon: '🏠' },
-    ...groups.filter(g => currentUser?.groups.includes(g.id)).map(g => ({
+    { id: 'all', name: 'Main', icon: '🏠' },
+    ...groups.filter(g => currentUser?.groups?.includes(g.id) || false).map(g => ({
       id: g.id.toString(),
       name: g.name,
       icon: g.name === 'Friends' ? '👥' : '💼',

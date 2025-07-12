@@ -1,279 +1,614 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Group, Newsflash, FriendRequest } from '../types';
+import pushNotificationService from './pushNotification';
+import * as Notifications from 'expo-notifications';
 
-const KEYS = {
-  USERS: 'friendlines_users',
-  GROUPS: 'friendlines_groups',
-  NEWSFLASHES: 'friendlines_newsflashes',
-  FRIEND_REQUESTS: 'friendlines_friend_requests',
-  CURRENT_USER: 'friendlines_current_user',
-};
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.132:3000/api/v1';
 
-class Database {
-  // Initialize with mock data
+interface Database {
+  users: User[];
+  groups: Group[];
+  newsflashes: Newsflash[];
+  friendRequests: FriendRequest[];
+}
+
+class DatabaseService {
+  private db: Database = {
+    users: [],
+    groups: [],
+    newsflashes: [],
+    friendRequests: [],
+  };
+
+  private authToken: string | null = null;
+
   async init() {
-    const hasData = await AsyncStorage.getItem(KEYS.USERS);
-    if (!hasData) {
-      await this.seedData();
+    try {
+      // Check if we have a stored auth token
+      const token = await AsyncStorage.getItem('authToken');
+      if (token) {
+        this.authToken = token;
+        // Register push token if available
+        await this.registerPushTokenIfNeeded();
+      }
+      
+      // Initialize with mock data for now
+      await this.initMockData();
+    } catch (error) {
+      console.error('Database initialization error:', error);
     }
   }
 
-  private async seedData() {
-    const mockUsers: User[] = [
-      {
-        id: 1,
-        username: "noa",
-        name: "Noa Levi",
-        email: "noa@example.com",
-        avatar: "🦉",
-        groups: [1, 2],
-        bio: "Coffee lover. News junkie.",
-        friends: [2, 3],
-        createdAt: Date.now(),
-      },
-      {
-        id: 2,
-        username: "amir",
-        name: "Amir Cohen",
-        email: "amir@example.com",
-        avatar: "🦁",
-        groups: [1],
-        bio: "Sports and tech.",
-        friends: [1],
-        createdAt: Date.now(),
-      },
-      {
-        id: 3,
-        username: "maya",
-        name: "Maya Ben-David",
-        email: "maya@example.com",
-        avatar: "🦊",
-        groups: [2],
-        bio: "Travel & food.",
-        friends: [1],
-        createdAt: Date.now(),
-      },
-    ];
-
-    const mockGroups: Group[] = [
-      { id: 1, name: "Friends", color: "#e60000", members: [1, 2], createdAt: Date.now() },
-      { id: 2, name: "Work", color: "#0077cc", members: [1, 3], createdAt: Date.now() },
-    ];
-
-    const mockNewsflashes: Newsflash[] = [
-      {
-        id: 1,
-        userId: 2,
-        groupIds: [1],
-        text: "Big game tonight! Who's watching?",
-        created: Date.now() - 1000 * 60 * 60,
-      },
-      {
-        id: 2,
-        userId: 1,
-        groupIds: [2],
-        text: "Project deadline moved to next week.",
-        created: Date.now() - 1000 * 60 * 30,
-      },
-      {
-        id: 3,
-        userId: 3,
-        groupIds: [2],
-        text: "Lunch at the new place?",
-        created: Date.now() - 1000 * 60 * 10,
-      },
-      {
-        id: 4,
-        userId: 1,
-        friendIds: [2, 3],
-        text: "Good morning everyone!",
-        created: Date.now() - 1000 * 60 * 5,
-      },
-    ];
-
-    await AsyncStorage.setItem(KEYS.USERS, JSON.stringify(mockUsers));
-    await AsyncStorage.setItem(KEYS.GROUPS, JSON.stringify(mockGroups));
-    await AsyncStorage.setItem(KEYS.NEWSFLASHES, JSON.stringify(mockNewsflashes));
-    await AsyncStorage.setItem(KEYS.FRIEND_REQUESTS, JSON.stringify([]));
+  private async registerPushTokenIfNeeded() {
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status === 'granted' && this.authToken) {
+        const token = await Notifications.getExpoPushTokenAsync();
+        if (token) {
+          await pushNotificationService.registerPushToken(token.data, this.authToken);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to register push token:', error);
+    }
   }
 
-  // User operations
+  private async initMockData() {
+    // Initialize with mock data
+    this.db = {
+      users: [
+        {
+          id: '1',
+          username: 'noa',
+          email: 'noa@example.com',
+          displayName: 'Noa Cohen',
+          bio: 'Tech journalist covering the latest in innovation',
+          profilePicture: 'https://i.pravatar.cc/150?u=noa',
+          friends: ['2', '3'],
+          groups: ['1'],
+        },
+        {
+          id: '2',
+          username: 'amir',
+          email: 'amir@example.com',
+          displayName: 'Amir Levi',
+          bio: 'Sports reporter and fitness enthusiast',
+          profilePicture: 'https://i.pravatar.cc/150?u=amir',
+          friends: ['1'],
+          groups: ['1'],
+        },
+        {
+          id: '3',
+          username: 'maya',
+          email: 'maya@example.com',
+          displayName: 'Maya Shapira',
+          bio: 'Business and finance correspondent',
+          profilePicture: 'https://i.pravatar.cc/150?u=maya',
+          friends: ['1'],
+          groups: ['2'],
+        },
+      ],
+      groups: [
+        {
+          id: '1',
+          name: 'Friends',
+          members: ['1', '2'],
+        },
+        {
+          id: '2',
+          name: 'Work',
+          members: ['1', '3'],
+        },
+      ],
+      newsflashes: [],
+      friendRequests: [],
+    };
+
+    await this.saveDatabase();
+  }
+
+  private async saveDatabase() {
+    try {
+      await AsyncStorage.setItem('database', JSON.stringify(this.db));
+    } catch (error) {
+      console.error('Failed to save database:', error);
+    }
+  }
+
+  private async loadDatabase() {
+    try {
+      const data = await AsyncStorage.getItem('database');
+      if (data) {
+        this.db = JSON.parse(data);
+      }
+    } catch (error) {
+      console.error('Failed to load database:', error);
+    }
+  }
+
+  // Auth methods
+  async login(username: string, password: string): Promise<User | null> {
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      
+      // Store auth token
+      this.authToken = data.token;
+      await AsyncStorage.setItem('authToken', data.token);
+      
+      // Store current user
+      await AsyncStorage.setItem('currentUser', JSON.stringify(data.user));
+      
+      // Register push token after successful login
+      await this.registerPushTokenIfNeeded();
+
+      return {
+        id: data.user.id.toString(),
+        username: data.user.username,
+        email: data.user.email,
+        displayName: data.user.display_name,
+        bio: data.user.bio || '',
+        profilePicture: data.user.profile_picture || `https://i.pravatar.cc/150?u=${data.user.username}`,
+        friends: [],
+        groups: [],
+      };
+    } catch (error) {
+      console.error('Login error:', error);
+      // Fallback to mock login for development
+      await this.loadDatabase();
+      const user = this.db.users.find(u => u.username === username);
+      if (user) {
+        await AsyncStorage.setItem('currentUser', JSON.stringify(user));
+      }
+      return user || null;
+    }
+  }
+
+  async logout(): Promise<void> {
+    try {
+      // Unregister push token
+      if (this.authToken) {
+        await pushNotificationService.unregisterPushToken(this.authToken);
+      }
+      
+      // Clear auth data
+      await AsyncStorage.removeItem('authToken');
+      await AsyncStorage.removeItem('currentUser');
+      this.authToken = null;
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  }
+
+  async register(username: string, email: string, password: string, displayName: string): Promise<User | null> {
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, email, password, displayName }),
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      
+      // Store auth token
+      this.authToken = data.token;
+      await AsyncStorage.setItem('authToken', data.token);
+      
+      // Store current user
+      await AsyncStorage.setItem('currentUser', JSON.stringify(data.user));
+      
+      // Register push token after successful registration
+      await this.registerPushTokenIfNeeded();
+
+      return {
+        id: data.user.id.toString(),
+        username: data.user.username,
+        email: data.user.email,
+        displayName: data.user.display_name,
+        bio: '',
+        profilePicture: `https://i.pravatar.cc/150?u=${data.user.username}`,
+        friends: [],
+        groups: [],
+      };
+    } catch (error) {
+      console.error('Registration error:', error);
+      // Fallback to mock registration
+      await this.loadDatabase();
+      const newUser: User = {
+        id: Date.now().toString(),
+        username,
+        email,
+        displayName,
+        bio: '',
+        profilePicture: `https://i.pravatar.cc/150?u=${username}`,
+        friends: [],
+        groups: [],
+      };
+      this.db.users.push(newUser);
+      await this.saveDatabase();
+      await AsyncStorage.setItem('currentUser', JSON.stringify(newUser));
+      return newUser;
+    }
+  }
+
+  async getCurrentUser(): Promise<User | null> {
+    try {
+      const userData = await AsyncStorage.getItem('currentUser');
+      if (userData) {
+        const user = JSON.parse(userData);
+        // Ensure all required properties are present
+        return {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          displayName: user.displayName,
+          bio: user.bio || '',
+          profilePicture: user.profilePicture || `https://i.pravatar.cc/150?u=${user.username}`,
+          friends: user.friends || [],
+          groups: user.groups || [],
+        };
+      }
+    } catch (error) {
+      console.error('Failed to get current user:', error);
+    }
+    return null;
+  }
+
+  // User methods
+  async getUser(userId: string): Promise<User | null> {
+    await this.loadDatabase();
+    return this.db.users.find(u => u.id === userId) || null;
+  }
+
+  async getUserByUsername(username: string): Promise<User | null> {
+    await this.loadDatabase();
+    return this.db.users.find(u => u.username.toLowerCase() === username.toLowerCase()) || null;
+  }
+
+  async getUserByEmail(email: string): Promise<User | null> {
+    await this.loadDatabase();
+    return this.db.users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+  }
+
+  async getUserById(userId: string): Promise<User | null> {
+    return this.getUser(userId);
+  }
+
   async getUsers(): Promise<User[]> {
-    const data = await AsyncStorage.getItem(KEYS.USERS);
-    return data ? JSON.parse(data) : [];
+    await this.loadDatabase();
+    return this.db.users;
   }
 
-  async getUserById(id: number): Promise<User | undefined> {
-    const users = await this.getUsers();
-    return users.find(u => u.id === id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const users = await this.getUsers();
-    return users.find(u => u.username.toLowerCase() === username.toLowerCase());
-  }
-
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const users = await this.getUsers();
-    return users.find(u => u.email.toLowerCase() === email.toLowerCase());
-  }
-
-  async createUser(user: Omit<User, 'id' | 'createdAt'>): Promise<User> {
-    const users = await this.getUsers();
+  async createUser(userData: {
+    username: string;
+    email: string;
+    displayName: string;
+    password?: string;
+  }): Promise<User> {
+    await this.loadDatabase();
     const newUser: User = {
-      ...user,
-      id: Math.max(0, ...users.map(u => u.id)) + 1,
-      createdAt: Date.now(),
+      id: Date.now().toString(),
+      username: userData.username,
+      email: userData.email,
+      displayName: userData.displayName,
+      bio: '',
+      profilePicture: `https://i.pravatar.cc/150?u=${userData.username}`,
       friends: [],
       groups: [],
     };
-    users.push(newUser);
-    await AsyncStorage.setItem(KEYS.USERS, JSON.stringify(users));
+    this.db.users.push(newUser);
+    await this.saveDatabase();
     return newUser;
   }
 
-  async updateUser(id: number, updates: Partial<User>): Promise<User | null> {
-    const users = await this.getUsers();
-    const index = users.findIndex(u => u.id === id);
-    if (index === -1) return null;
-    
-    users[index] = { ...users[index], ...updates };
-    await AsyncStorage.setItem(KEYS.USERS, JSON.stringify(users));
-    return users[index];
+  async setCurrentUser(user: User): Promise<void> {
+    await AsyncStorage.setItem('currentUser', JSON.stringify(user));
   }
 
-  // Current user operations
-  async getCurrentUser(): Promise<User | null> {
-    const userId = await AsyncStorage.getItem(KEYS.CURRENT_USER);
-    if (!userId) return null;
-    const user = await this.getUserById(parseInt(userId));
-    return user || null;
+  async clearCurrentUser(): Promise<void> {
+    await AsyncStorage.removeItem('currentUser');
   }
 
-  async setCurrentUser(user: User | null): Promise<void> {
-    if (user) {
-      await AsyncStorage.setItem(KEYS.CURRENT_USER, user.id.toString());
-    } else {
-      await AsyncStorage.removeItem(KEYS.CURRENT_USER);
+  async searchUsers(query: string): Promise<User[]> {
+    if (this.authToken) {
+      try {
+        const response = await fetch(`${API_URL}/users/search?q=${encodeURIComponent(query)}`, {
+          headers: {
+            'Authorization': `Bearer ${this.authToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return data.users.map((u: any) => ({
+            id: u.id.toString(),
+            username: u.username,
+            displayName: u.display_name,
+            profilePicture: u.profile_picture || `https://i.pravatar.cc/150?u=${u.username}`,
+            bio: '',
+            friends: [],
+            groups: [],
+          }));
+        }
+      } catch (error) {
+        console.error('Search users error:', error);
+      }
     }
-  }
 
-  // Group operations
-  async getGroups(): Promise<Group[]> {
-    const data = await AsyncStorage.getItem(KEYS.GROUPS);
-    return data ? JSON.parse(data) : [];
-  }
-
-  async getGroupById(id: number): Promise<Group | undefined> {
-    const groups = await this.getGroups();
-    return groups.find(g => g.id === id);
-  }
-
-  async updateGroup(id: number, updates: Partial<Group>): Promise<Group | null> {
-    const groups = await this.getGroups();
-    const index = groups.findIndex(g => g.id === id);
-    if (index === -1) return null;
-    
-    groups[index] = { ...groups[index], ...updates };
-    await AsyncStorage.setItem(KEYS.GROUPS, JSON.stringify(groups));
-    return groups[index];
-  }
-
-  // Newsflash operations
-  async getNewsflashes(): Promise<Newsflash[]> {
-    const data = await AsyncStorage.getItem(KEYS.NEWSFLASHES);
-    return data ? JSON.parse(data) : [];
-  }
-
-  async createNewsflash(newsflash: Omit<Newsflash, 'id' | 'created'>): Promise<Newsflash> {
-    const newsflashes = await this.getNewsflashes();
-    const newNewsflash: Newsflash = {
-      ...newsflash,
-      id: Math.max(0, ...newsflashes.map(n => n.id)) + 1,
-      created: Date.now(),
-    };
-    newsflashes.push(newNewsflash);
-    await AsyncStorage.setItem(KEYS.NEWSFLASHES, JSON.stringify(newsflashes));
-    return newNewsflash;
-  }
-
-  async getNewsflashesForUser(userId: number): Promise<Newsflash[]> {
-    const newsflashes = await this.getNewsflashes();
-    const user = await this.getUserById(userId);
-    if (!user) return [];
-
-    return newsflashes.filter(flash => 
-      flash.userId === userId ||
-      (flash.groupIds && flash.groupIds.some(gid => user.groups.includes(gid))) ||
-      (flash.friendIds && flash.friendIds.includes(userId))
+    // Fallback to local search
+    await this.loadDatabase();
+    const currentUser = await this.getCurrentUser();
+    return this.db.users.filter(u => 
+      u.id !== currentUser?.id &&
+      (u.username.toLowerCase().includes(query.toLowerCase()) ||
+       u.displayName.toLowerCase().includes(query.toLowerCase()) ||
+       u.email.toLowerCase().includes(query.toLowerCase()))
     );
   }
 
-  // Friend request operations
-  async getFriendRequests(): Promise<FriendRequest[]> {
-    const data = await AsyncStorage.getItem(KEYS.FRIEND_REQUESTS);
-    return data ? JSON.parse(data) : [];
-  }
-
-  async createFriendRequest(fromUserId: number, toUserId: number): Promise<FriendRequest> {
-    const requests = await this.getFriendRequests();
-    
-    // Check if request already exists
-    const existing = requests.find(r => 
-      (r.fromUserId === fromUserId && r.toUserId === toUserId) ||
-      (r.fromUserId === toUserId && r.toUserId === fromUserId)
-    );
-    
-    if (existing) {
-      throw new Error('Friend request already exists');
-    }
-
-    const newRequest: FriendRequest = {
-      id: Math.max(0, ...requests.map(r => r.id)) + 1,
-      fromUserId,
-      toUserId,
-      status: 'pending',
-      createdAt: Date.now(),
-    };
-    
-    requests.push(newRequest);
-    await AsyncStorage.setItem(KEYS.FRIEND_REQUESTS, JSON.stringify(requests));
-    return newRequest;
-  }
-
-  async updateFriendRequest(id: number, status: 'accepted' | 'rejected'): Promise<void> {
-    const requests = await this.getFriendRequests();
-    const request = requests.find(r => r.id === id);
-    if (!request) return;
-
-    request.status = status;
-    await AsyncStorage.setItem(KEYS.FRIEND_REQUESTS, JSON.stringify(requests));
-
-    if (status === 'accepted') {
-      // Add each user to the other's friends list
-      const fromUser = await this.getUserById(request.fromUserId);
-      const toUser = await this.getUserById(request.toUserId);
+  async updateUser(userId: string, updates: Partial<User>): Promise<void> {
+    await this.loadDatabase();
+    const index = this.db.users.findIndex(u => u.id === userId);
+    if (index !== -1) {
+      this.db.users[index] = { ...this.db.users[index], ...updates };
+      await this.saveDatabase();
       
-      if (fromUser && toUser) {
-        await this.updateUser(fromUser.id, {
-          friends: [...new Set([...fromUser.friends, toUser.id])],
-        });
-        await this.updateUser(toUser.id, {
-          friends: [...new Set([...toUser.friends, fromUser.id])],
-        });
+      const currentUser = await this.getCurrentUser();
+      if (currentUser?.id === userId) {
+        await AsyncStorage.setItem('currentUser', JSON.stringify(this.db.users[index]));
       }
     }
   }
 
-  async getPendingFriendRequestsForUser(userId: number): Promise<FriendRequest[]> {
-    const requests = await this.getFriendRequests();
-    return requests.filter(r => r.toUserId === userId && r.status === 'pending');
+  // Friend methods
+  async sendFriendRequest(fromUserId: string, toUserId: string): Promise<void> {
+    if (this.authToken) {
+      try {
+        const response = await fetch(`${API_URL}/users/friends/request`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.authToken}`,
+          },
+          body: JSON.stringify({ receiverId: parseInt(toUserId) }),
+        });
+
+        if (response.ok) {
+          return;
+        }
+      } catch (error) {
+        console.error('Send friend request error:', error);
+      }
+    }
+
+    // Fallback to local
+    await this.loadDatabase();
+    const request: FriendRequest = {
+      id: Date.now().toString(),
+      fromUserId,
+      toUserId,
+      status: 'pending',
+      createdAt: new Date(),
+    };
+    this.db.friendRequests.push(request);
+    await this.saveDatabase();
   }
 
-  // Clear all data (for logout)
-  async clearCurrentUser(): Promise<void> {
-    await AsyncStorage.removeItem(KEYS.CURRENT_USER);
+  async createFriendRequest(fromUserId: string, toUserId: string): Promise<void> {
+    return this.sendFriendRequest(fromUserId, toUserId);
+  }
+
+  async acceptFriendRequest(requestId: string): Promise<void> {
+    if (this.authToken) {
+      try {
+        const response = await fetch(`${API_URL}/users/friends/request/${requestId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.authToken}`,
+          },
+          body: JSON.stringify({ action: 'accept' }),
+        });
+
+        if (response.ok) {
+          return;
+        }
+      } catch (error) {
+        console.error('Accept friend request error:', error);
+      }
+    }
+
+    // Fallback to local
+    await this.loadDatabase();
+    const request = this.db.friendRequests.find(r => r.id === requestId);
+    if (request) {
+      request.status = 'accepted';
+      
+      // Add to friends lists
+      const fromUser = this.db.users.find(u => u.id === request.fromUserId);
+      const toUser = this.db.users.find(u => u.id === request.toUserId);
+      
+      if (fromUser && toUser) {
+        if (!fromUser.friends) fromUser.friends = [];
+        if (!toUser.friends) toUser.friends = [];
+        
+        if (!fromUser.friends.includes(request.toUserId)) {
+          fromUser.friends.push(request.toUserId);
+        }
+        if (!toUser.friends.includes(request.fromUserId)) {
+          toUser.friends.push(request.fromUserId);
+        }
+      }
+      
+      await this.saveDatabase();
+    }
+  }
+
+  async getFriendRequests(userId: string): Promise<FriendRequest[]> {
+    await this.loadDatabase();
+    return this.db.friendRequests.filter(r => 
+      (r.toUserId === userId || r.fromUserId === userId) && r.status === 'pending'
+    );
+  }
+
+  // Newsflash methods
+  async createNewsflash(
+    authorId: string,
+    content: string,
+    sections: string[],
+    recipients: string[]
+  ): Promise<Newsflash> {
+    if (this.authToken) {
+      try {
+        const response = await fetch(`${API_URL}/newsflashes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.authToken}`,
+          },
+          body: JSON.stringify({
+            content,
+            sections,
+            recipients: recipients.map(id => parseInt(id)),
+            groups: [], // Add group support later
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return {
+            id: data.newsflash.id.toString(),
+            authorId: data.newsflash.author_id.toString(),
+            content: data.newsflash.content,
+            sections: data.newsflash.sections || [],
+            recipients,
+            createdAt: new Date(data.newsflash.created_at),
+            likes: 0,
+            comments: 0,
+          };
+        }
+      } catch (error) {
+        console.error('Create newsflash error:', error);
+      }
+    }
+
+    // Fallback to local
+    await this.loadDatabase();
+    const newsflash: Newsflash = {
+      id: Date.now().toString(),
+      authorId,
+      content,
+      sections,
+      recipients,
+      createdAt: new Date(),
+      likes: 0,
+      comments: 0,
+    };
+    this.db.newsflashes.unshift(newsflash);
+    await this.saveDatabase();
+    return newsflash;
+  }
+
+  async getNewsflashes(userId: string): Promise<Newsflash[]> {
+    if (this.authToken) {
+      try {
+        const response = await fetch(`${API_URL}/newsflashes/feed`, {
+          headers: {
+            'Authorization': `Bearer ${this.authToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return data.newsflashes.map((n: any) => ({
+            id: n.id.toString(),
+            authorId: n.author_id.toString(),
+            content: n.content,
+            sections: n.sections || [],
+            recipients: [],
+            createdAt: new Date(n.created_at),
+            likes: n.like_count || 0,
+            comments: n.comment_count || 0,
+            image: n.image,
+          }));
+        }
+      } catch (error) {
+        console.error('Get newsflashes error:', error);
+      }
+    }
+
+    // Fallback to local
+    await this.loadDatabase();
+    const user = await this.getUser(userId);
+    if (!user) return [];
+
+    return this.db.newsflashes.filter(n => 
+      n.recipients.includes('all') ||
+      n.recipients.includes(userId) ||
+      (user.groups && n.recipients.some(r => user.groups.includes(r))) ||
+      n.authorId === userId ||
+      (user.friends && user.friends.includes(n.authorId))
+    ).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async getNewsflashesForUser(userId: string): Promise<Newsflash[]> {
+    await this.loadDatabase();
+    return this.db.newsflashes.filter(n => n.authorId === userId);
+  }
+
+  // Group methods
+  async getGroups(): Promise<Group[]> {
+    if (this.authToken) {
+      try {
+        const response = await fetch(`${API_URL}/groups`, {
+          headers: {
+            'Authorization': `Bearer ${this.authToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return data.groups.map((g: any) => ({
+            id: g.id.toString(),
+            name: g.name,
+            members: [], // Would need another API call to get members
+          }));
+        }
+      } catch (error) {
+        console.error('Get groups error:', error);
+      }
+    }
+
+    // Fallback to local
+    await this.loadDatabase();
+    return this.db.groups;
+  }
+
+  // Test notification
+  async testNotification(type: 'newsflash' | 'friend_request' | 'group_invitation'): Promise<void> {
+    if (this.authToken) {
+      await pushNotificationService.testNotification(type, this.authToken);
+    } else {
+      throw new Error('Not authenticated');
+    }
   }
 }
 
-export default new Database(); 
+export default new DatabaseService(); 

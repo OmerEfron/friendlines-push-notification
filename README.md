@@ -4,7 +4,7 @@ A mobile news platform built with React Native and Expo, designed to look and fe
 
 ## Features
 
-- **News Website UI**: Professional news site layout with featured articles and sections
+- **News Website UI**: Professional news site layout with featured articles and compact news cards (Ynet-style)
 - **Headline Publishing**: Write and publish news headlines (180 characters max)
 - **News Sections**: Organize content by sections (Friends, Work, etc.)
 - **Journalist Network**: Connect with other journalists by username or email
@@ -12,6 +12,7 @@ A mobile news platform built with React Native and Expo, designed to look and fe
 - **Professional Profiles**: View journalist profiles, bio, and published articles
 - **Dark Mode Support**: News-appropriate dark theme for comfortable reading
 - **Offline-First**: JSON database using AsyncStorage for instant access
+- **Responsive Layout**: Properly handles safe areas on both iOS and Android devices
 
 ## Getting Started
 
@@ -101,8 +102,14 @@ The app uses AsyncStorage for persistent data storage with the following collect
 ### News Feed Experience
 1. "Home" tab shows all headlines in news website layout
 2. Featured articles appear with large hero images
-3. Filter by sections using top navigation
-4. Pull to refresh for latest headlines
+3. Compact news cards with:
+   - Category labels
+   - Clear headline text
+   - Author attribution
+   - Thumbnail images
+   - Professional spacing and layout
+4. Filter by sections using top navigation
+5. Pull to refresh for latest headlines
 
 ## Future Enhancements
 
@@ -127,3 +134,22 @@ The app uses AsyncStorage for persistent data storage with the following collect
 ## License
 
 This project is a demo/mockup for educational purposes. 
+
+## UI Components
+
+### NewsflashCard
+- Two display modes:
+  1. Featured article: Large hero image with prominent headline
+  2. Compact card: Ynet-style layout with:
+     - Right-aligned thumbnail (120x80px)
+     - Category label
+     - Headline with proper text wrapping
+     - Author and timestamp footer
+- Proper spacing and no text overlapping
+- Responsive to different screen sizes
+
+### Navigation
+- Bottom tab navigation with proper safe area handling
+- Intuitive icons: Home🏠, Write✍️, Network🌐, Profile👤
+- Properly positioned above system navigation on Android
+- Consistent experience across iOS and Android 

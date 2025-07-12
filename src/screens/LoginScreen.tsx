@@ -45,39 +45,20 @@ export const LoginScreen: React.FC = () => {
     try {
       if (isLogin) {
         // Login
-        const user = await database.getUserByUsername(username);
+        const user = await database.login(username, password);
         if (user) {
-          await database.setCurrentUser(user);
           navigation.replace('Main');
         } else {
-          Alert.alert('Error', 'User not found');
+          Alert.alert('Error', 'Invalid username or password');
         }
       } else {
         // Register
-        const existingUser = await database.getUserByUsername(username);
-        if (existingUser) {
-          Alert.alert('Error', 'Username already taken');
-          return;
+        const user = await database.register(username, email, password, displayName);
+        if (user) {
+          navigation.replace('Main');
+        } else {
+          Alert.alert('Error', 'Registration failed. Username or email may already be taken.');
         }
-
-        const existingEmail = await database.getUserByEmail(email);
-        if (existingEmail) {
-          Alert.alert('Error', 'Email already registered');
-          return;
-        }
-
-        const newUser = await database.createUser({
-          username,
-          email,
-          name: displayName,
-          avatar: getRandomAvatar(),
-          bio: '',
-          groups: [],
-          friends: [],
-        });
-
-        await database.setCurrentUser(newUser);
-        navigation.replace('Main');
       }
     } catch (error) {
       Alert.alert('Error', 'Something went wrong. Please try again.');

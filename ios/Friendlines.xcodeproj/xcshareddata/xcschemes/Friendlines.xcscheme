@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "PushNotifications2.app"
-               BlueprintName = "PushNotifications2"
-               ReferencedContainer = "container:PushNotifications2.xcodeproj">
+               BuildableName = "Friendlines.app"
+               BlueprintName = "Friendlines"
+               ReferencedContainer = "container:Friendlines.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "PushNotifications2Tests.xctest"
-               BlueprintName = "PushNotifications2Tests"
-               ReferencedContainer = "container:PushNotifications2.xcodeproj">
+               BuildableName = "FriendlinesTests.xctest"
+               BlueprintName = "FriendlinesTests"
+               ReferencedContainer = "container:Friendlines.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "PushNotifications2.app"
-            BlueprintName = "PushNotifications2"
-            ReferencedContainer = "container:PushNotifications2.xcodeproj">
+            BuildableName = "Friendlines.app"
+            BlueprintName = "Friendlines"
+            ReferencedContainer = "container:Friendlines.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "PushNotifications2.app"
-            BlueprintName = "PushNotifications2"
-            ReferencedContainer = "container:PushNotifications2.xcodeproj">
+            BuildableName = "Friendlines.app"
+            BlueprintName = "Friendlines"
+            ReferencedContainer = "container:Friendlines.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

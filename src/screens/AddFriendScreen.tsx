@@ -50,7 +50,7 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
     setIsLoading(true);
 
     try {
-      let foundUser: User | undefined;
+      let foundUser: User | null = null;
       
       if (searchType === 'username') {
         foundUser = await database.getUserByUsername(searchText.trim());
@@ -68,13 +68,13 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
         return;
       }
 
-      if (currentUser?.friends.includes(foundUser.id)) {
-        Alert.alert('Already Connected', `You're already connected with ${foundUser.name}`);
+      if (currentUser?.friends?.includes(foundUser.id)) {
+        Alert.alert('Already Connected', `You're already connected with ${foundUser.displayName}`);
         return;
       }
 
       // Check if friend request already exists
-      const requests = await database.getFriendRequests();
+      const requests = await database.getFriendRequests(currentUser!.id);
       const existingRequest = requests.find(r =>
         (r.fromUserId === currentUser?.id && r.toUserId === foundUser!.id) ||
         (r.fromUserId === foundUser!.id && r.toUserId === currentUser?.id)
@@ -92,7 +92,7 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
       // Show confirmation
       Alert.alert(
         'Send Connection Request',
-        `Connect with ${foundUser.name} (@${foundUser.username})?`,
+        `Connect with ${foundUser.displayName} (@${foundUser.username})?`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -102,7 +102,7 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
                 await database.createFriendRequest(currentUser!.id, foundUser!.id);
                 Alert.alert(
                   'Request Sent',
-                  `Connection request sent to ${foundUser!.name}`,
+                  `Connection request sent to ${foundUser!.displayName}`,
                   [{ text: 'OK', onPress: () => setSearchText('') }]
                 );
               } catch (error: any) {

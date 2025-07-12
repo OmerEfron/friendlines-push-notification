@@ -38,24 +38,24 @@ export const NewsflashCard: React.FC<NewsflashCardProps> = ({
         activeOpacity={0.7}
       >
         <Image
-          source={{ uri: `https://source.unsplash.com/600x300/?news,breaking,${newsflash.id}` }}
+          source={{ uri: newsflash.image || `https://source.unsplash.com/600x300/?news,breaking,${newsflash.id}` }}
           style={styles.featuredImage}
         />
         <View style={styles.featuredContent}>
           {groups.length > 0 && (
-            <Text style={[styles.featuredCategory, { color: groups[0].color }]}>
+            <Text style={[styles.featuredCategory, { color: colors.primary }]}>
               {groups[0].name.toUpperCase()}
             </Text>
           )}
           <Text style={[styles.featuredHeadline, { color: colors.text }]}>
-            {newsflash.text}
+            {newsflash.content}
           </Text>
           <View style={styles.featuredMeta}>
             <Text style={[styles.featuredAuthor, { color: colors.text }]}>
-              {author.name}
+              {author.displayName}
             </Text>
             <Text style={[styles.featuredTime, { color: colors.text }]}>
-              {timeAgo(newsflash.created)}
+              {timeAgo(newsflash.createdAt.getTime())}
             </Text>
           </View>
         </View>
@@ -74,7 +74,7 @@ export const NewsflashCard: React.FC<NewsflashCardProps> = ({
       <View style={styles.compactContent}>
         {/* Category label at top */}
         {groups.length > 0 && (
-          <Text style={[styles.compactCategory, { color: groups[0].color }]}>
+          <Text style={[styles.compactCategory, { color: colors.primary }]}>
             {groups[0].name.toUpperCase()}
           </Text>
         )}
@@ -84,23 +84,23 @@ export const NewsflashCard: React.FC<NewsflashCardProps> = ({
           style={[styles.compactHeadline, { color: colors.text }]}
           numberOfLines={3}
         >
-          {newsflash.text}
+          {newsflash.content}
         </Text>
 
         {/* Bottom row with author and time */}
         <View style={styles.compactMeta}>
           <Text style={[styles.compactAuthor, { color: colors.text }]}>
-            {author.name}
+            {author.displayName}
           </Text>
           <Text style={[styles.compactTime, { color: colors.text }]}>
-            {timeAgo(newsflash.created)}
+            {timeAgo(newsflash.createdAt.getTime())}
           </Text>
         </View>
       </View>
 
       {/* Small thumbnail on the right */}
       <Image
-        source={{ uri: `https://source.unsplash.com/120x80/?news,${newsflash.id}` }}
+        source={{ uri: newsflash.image || `https://source.unsplash.com/120x80/?news,${newsflash.id}` }}
         style={styles.compactThumbnail}
       />
     </TouchableOpacity>

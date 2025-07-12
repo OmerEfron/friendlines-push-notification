@@ -1,38 +1,56 @@
 export interface User {
-  id: number;
+  id: string;
   username: string;
-  name: string;
+  displayName: string;
   email: string;
-  avatar: string;
-  groups: number[];
   bio: string;
-  friends: number[];
-  createdAt: number;
+  profilePicture: string;
+  friends: string[];
+  groups: string[];
+  
+  // Legacy fields for compatibility
+  name?: string;
+  avatar?: string;
+  createdAt?: number;
 }
 
 export interface Group {
-  id: number;
+  id: string;
   name: string;
-  color: string;
-  members: number[];
-  createdAt: number;
+  description?: string;
+  members: string[];
+  profilePicture?: string;
+  
+  // Legacy fields
+  color?: string;
+  createdAt?: number;
 }
 
 export interface Newsflash {
-  id: number;
-  userId: number;
+  id: string;
+  authorId: string;
+  content: string;
+  sections: string[];
+  recipients: string[];
+  createdAt: Date;
+  likes: number;
+  comments: number;
+  image?: string;
+  
+  // Legacy fields
+  userId?: number;
   groupIds?: number[];
   friendIds?: number[];
-  text: string;
-  created: number;
+  text?: string;
+  created?: number;
 }
 
 export interface FriendRequest {
-  id: number;
-  fromUserId: number;
-  toUserId: number;
+  id: string;
+  fromUserId: string;
+  toUserId: string;
   status: 'pending' | 'accepted' | 'rejected';
-  createdAt: number;
+  createdAt: Date;
 }
 
 export interface AppState {

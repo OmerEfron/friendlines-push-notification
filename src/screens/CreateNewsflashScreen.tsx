@@ -29,8 +29,8 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [friends, setFriends] = useState<User[]>([]);
-  const [selectedGroups, setSelectedGroups] = useState<number[]>([]);
-  const [selectedFriends, setSelectedFriends] = useState<number[]>([]);
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const colors = isDarkMode ? Colors.dark : Colors.light;
@@ -45,16 +45,16 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
       setCurrentUser(user);
       
       const allGroups = await database.getGroups();
-      const userGroups = allGroups.filter(g => user.groups.includes(g.id));
+      const userGroups = allGroups.filter(g => user.groups?.includes(g.id) || false);
       setGroups(userGroups);
       
       const allUsers = await database.getUsers();
-      const userFriends = allUsers.filter(u => user.friends.includes(u.id));
+      const userFriends = allUsers.filter((u: User) => user.friends?.includes(u.id) || false);
       setFriends(userFriends);
     }
   };
 
-  const toggleGroup = (groupId: number) => {
+  const toggleGroup = (groupId: string) => {
     setSelectedGroups(prev =>
       prev.includes(groupId)
         ? prev.filter(id => id !== groupId)
@@ -62,7 +62,7 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
     );
   };
 
-  const toggleFriend = (friendId: number) => {
+  const toggleFriend = (friendId: string) => {
     setSelectedFriends(prev =>
       prev.includes(friendId)
         ? prev.filter(id => id !== friendId)
@@ -84,12 +84,18 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
     setIsLoading(true);
 
     try {
-      const newsflash = await database.createNewsflash({
-        userId: currentUser!.id,
-        text: text.trim(),
-        groupIds: selectedGroups.length > 0 ? selectedGroups : undefined,
-        friendIds: selectedFriends.length > 0 ? selectedFriends : undefined,
-      });
+      // Prepare recipients list - combine groups and friends
+      const recipients: string[] = [...selectedFriends];
+      
+      // For groups, we'll handle them separately in the future
+      // For now, just use friend IDs as recipients
+      
+      const newsflash = await database.createNewsflash(
+        currentUser!.id,
+        text.trim(),
+        [], // sections - empty for now
+        recipients
+      );
 
       // Show notification
       onNewsflashCreated(
@@ -180,7 +186,7 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
                     <View
                       style={[
                         styles.colorDot,
-                        { backgroundColor: group.color },
+                        { backgroundColor: colors.primary },
                       ]}
                     />
                     <Text style={[styles.selectionText, { color: colors.text }]}>
@@ -225,9 +231,9 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
                   onPress={() => toggleFriend(friend.id)}
                 >
                   <View style={styles.selectionContent}>
-                    <Text style={styles.friendAvatar}>{friend.avatar}</Text>
+                    <Text style={styles.friendAvatar}>👤</Text>
                     <Text style={[styles.selectionText, { color: colors.text }]}>
-                      {friend.name}
+                      {friend.displayName}
                     </Text>
                   </View>
                   <View

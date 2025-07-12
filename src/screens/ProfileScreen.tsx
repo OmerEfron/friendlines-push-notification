@@ -47,7 +47,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
     if (isCurrentUser && current) {
       profileUser = current;
     } else if (userId) {
-      profileUser = (await database.getUserById(userId)) || null;
+      profileUser = await database.getUser(userId);
     }
 
     if (profileUser) {
@@ -55,9 +55,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
       setBio(profileUser.bio);
 
       // Load user's newsflashes
-      const allNewsflashes = await database.getNewsflashes();
-      const userNewsflashes = allNewsflashes.filter(n => n.userId === profileUser.id);
-      setNewsflashes(userNewsflashes.sort((a, b) => b.created - a.created));
+      const userNewsflashes = await database.getNewsflashesForUser(profileUser.id);
+      setNewsflashes(userNewsflashes.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
 
       // Load groups and users for newsflash display
       const allGroups = await database.getGroups();
@@ -90,8 +89,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
           text: 'Logout',
           style: 'destructive',
           onPress: async () => {
-            await database.clearCurrentUser();
-                         navigation.reset({
+            await database.logout();
+            navigation.reset({
               index: 0,
               routes: [{ name: 'Login' as never }],
             });
@@ -104,13 +103,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
   const renderNewsflash = ({ item }: { item: Newsflash }) => {
     if (!user) return null;
 
-    const itemGroups = item.groupIds
-      ? groups.filter(g => item.groupIds!.includes(g.id))
-      : [];
+    // Find groups that this newsflash was sent to
+    const itemGroups = groups.filter(g => 
+      item.recipients.some(recipientId => g.members.includes(recipientId))
+    );
     
-    const itemFriends = item.friendIds
-      ? allUsers.filter(u => item.friendIds!.includes(u.id))
-      : [];
+    // Find individual friends this was sent to
+    const itemFriends = allUsers.filter(u => 
+      item.recipients.includes(u.id)
+    );
 
     return (
       <NewsflashCard
@@ -138,9 +139,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
     >
       {/* Profile Header */}
       <View style={[styles.header, { backgroundColor: colors.secondary }]}>
-        <Text style={styles.avatar}>{user.avatar}</Text>
+        <Text style={styles.avatar}>👤</Text>
         <View style={styles.headerInfo}>
-          <Text style={[styles.name, { color: colors.text }]}>{user.name}</Text>
+          <Text style={[styles.name, { color: colors.text }]}>{user.displayName}</Text>
           <Text style={[styles.username, { color: colors.text }]}>@{user.username}</Text>
           {!isEditingBio ? (
             <Text style={[styles.bio, { color: colors.text }]}>{user.bio || 'No bio yet'}</Text>
@@ -178,7 +179,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
       )}
 
       {/* Groups */}
-      {user.groups.length > 0 && (
+      {user.groups && user.groups.length > 0 && (
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Groups</Text>
           <View style={styles.groupList}>
@@ -188,7 +189,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
               return (
                 <View
                   key={group.id}
-                  style={[styles.groupChip, { backgroundColor: group.color }]}
+                  style={[styles.groupChip, { backgroundColor: colors.primary }]}
                 >
                   <Text style={styles.groupChipText}>{group.name}</Text>
                 </View>
@@ -208,13 +209,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
         </View>
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: colors.text }]}>
-            {user.friends.length}
+            {user.friends?.length || 0}
           </Text>
           <Text style={[styles.statLabel, { color: colors.text }]}>Friends</Text>
         </View>
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: colors.text }]}>
-            {user.groups.length}
+            {user.groups?.length || 0}
           </Text>
           <Text style={[styles.statLabel, { color: colors.text }]}>Groups</Text>
         </View>
