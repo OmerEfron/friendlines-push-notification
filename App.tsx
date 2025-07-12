@@ -1,23 +1,57 @@
-import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
-import { usePushNotifications } from "./usePushNotifications";
+import React, { useState, useEffect } from 'react';
+import { View, useColorScheme } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AppNavigator } from './src/navigation/AppNavigator';
+import { InAppNotification } from './src/components/InAppNotification';
+import database from './src/services/database';
 
 export default function App() {
-  const { expoPushToken, notification } = usePushNotifications();
-  const data = JSON.stringify(notification, undefined, 2);
+  const systemColorScheme = useColorScheme();
+  const [isDarkMode, setIsDarkMode] = useState(systemColorScheme === 'dark');
+  const [notification, setNotification] = useState({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  useEffect(() => {
+    // Initialize database with mock data
+    database.init();
+  }, []);
+
+  const handleNewsflashCreated = (title: string, message: string) => {
+    setNotification({
+      visible: true,
+      title,
+      message,
+    });
+  };
+
+  const dismissNotification = () => {
+    setNotification(prev => ({ ...prev, visible: false }));
+  };
+
   return (
-    <View style={styles.container}>
-      <Text>Token: {expoPushToken?.data ?? ""}</Text>
-      <Text>Notification: {data}</Text>
-    </View>
+    <SafeAreaProvider>
+      <StatusBar
+        style={isDarkMode ? 'light' : 'dark'}
+      />
+      
+      <View style={{ flex: 1 }}>
+        <AppNavigator
+          isDarkMode={isDarkMode}
+          onNewsflashCreated={handleNewsflashCreated}
+        />
+        
+        <InAppNotification
+          visible={notification.visible}
+          title={notification.title}
+          message={notification.message}
+          onDismiss={dismissNotification}
+          isDarkMode={isDarkMode}
+        />
+      </View>
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

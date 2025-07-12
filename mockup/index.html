@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Friendlines News Mockup</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="app.css">
+  <style>
+    :root {
+      --primary: #222;
+      --secondary: #fff;
+      --accent: #e60000;
+      --muted: #f5f5f5;
+      --border: #e0e0e0;
+      --radius: 10px;
+      --transition: 0.2s;
+      --font-main: 'Segoe UI', Arial, sans-serif;
+      --headline: 'Noto Sans Hebrew', 'Arial', sans-serif;
+    }
+    [data-theme="dark"] {
+      --primary: #fff;
+      --secondary: #181818;
+      --accent: #e60000;
+      --muted: #232323;
+      --border: #333;
+    }
+    body {
+      margin: 0;
+      font-family: var(--font-main);
+      background: var(--muted);
+      color: var(--primary);
+      transition: background var(--transition), color var(--transition);
+    }
+    .site-header {
+      background: var(--secondary);
+      border-bottom: 2px solid var(--accent);
+      padding: 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px #0001;
+    }
+    .header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1.5rem;
+    }
+    .logo {
+      font-family: var(--headline);
+      font-weight: bold;
+      font-size: 2rem;
+      color: var(--accent);
+      letter-spacing: 1px;
+      margin-right: 2rem;
+      cursor: pointer;
+    }
+    .main-nav {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+    .main-nav button {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 1.1rem;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0.3rem 0.7rem;
+      border-radius: 5px;
+      transition: background var(--transition);
+    }
+    .main-nav button.active, .main-nav button:hover {
+      background: var(--muted);
+      color: var(--accent);
+    }
+    .header-utils {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #eee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: var(--accent);
+      font-weight: bold;
+      border: 2px solid var(--border);
+      cursor: pointer;
+    }
+    .theme-toggle {
+      font-size: 1.3rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--primary);
+    }
+    .main-content {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 2rem;
+      padding: 2rem 1.5rem 1.5rem 1.5rem;
+      min-height: 600px;
+    }
+    .main-col {
+      min-width: 0;
+    }
+    .sidebar {
+      background: var(--muted);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 1.2rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      min-width: 0;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .sidebar h3 {
+      font-size: 1.1rem;
+      color: var(--accent);
+      margin: 0 0 0.7rem 0;
+      font-weight: bold;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.3rem;
+    }
+    .sidebar-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+    .sidebar-list li {
+      font-size: 1rem;
+      color: var(--primary);
+      cursor: pointer;
+      transition: color var(--transition);
+    }
+    .sidebar-list li:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+    .feed-list {
+      display: grid;
+      gap: 1.2rem;
+    }
+    .newsflash {
+      background: var(--secondary);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.5rem;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      transition: box-shadow var(--transition);
+      box-shadow: 0 2px 8px #0001;
+      position: relative;
+    }
+    .newsflash:hover {
+      box-shadow: 0 4px 16px #0002;
+    }
+    .newsflash-header {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      font-size: 1rem;
+      color: #888;
+    }
+    .newsflash-content {
+      font-size: 1.2rem;
+      color: var(--primary);
+      font-family: var(--headline);
+      font-weight: 500;
+      line-height: 1.5;
+    }
+    .newsflash-meta {
+      font-size: 0.9rem;
+      color: #aaa;
+      margin-top: 0.2rem;
+    }
+    .newsflash-img {
+      width: 100%;
+      height: 180px;
+      background: #ddd;
+      border-radius: 8px;
+      object-fit: cover;
+      margin-bottom: 0.7rem;
+      display: block;
+    }
+    .group-chip, .friend-chip {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 20px;
+      padding: 0.2rem 0.9rem;
+      font-size: 0.95rem;
+      margin-bottom: 0.3rem;
+      margin-right: 0.3rem;
+      display: inline-block;
+    }
+    .friend-chip {
+      background: #0077cc;
+    }
+    .form-group {
+      margin-bottom: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .form-group label {
+      font-size: 0.97rem;
+      color: #666;
+    }
+    .form-group input, .form-group textarea, .form-group select {
+      padding: 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-size: 1rem;
+      background: var(--muted);
+      color: var(--primary);
+      transition: border var(--transition);
+    }
+    .form-group input:focus, .form-group textarea:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.7rem 1.5rem;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    .btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .toggle-link {
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: underline;
+      font-size: 0.97rem;
+      margin-left: 0.5rem;
+    }
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+    .profile-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .profile-info .name {
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    .profile-info .username {
+      color: #888;
+      font-size: 0.97rem;
+    }
+    .settings-panel {
+      max-width: 350px;
+      margin: 0 auto;
+      background: var(--muted);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.2rem;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+    .settings-panel label {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      font-size: 1rem;
+    }
+    .group-list {
+      display: flex;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.2rem;
+    }
+    .fade-in {
+      animation: fadeIn 0.3s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px);}
+      to { opacity: 1; transform: none;}
+    }
+    @media (max-width: 900px) {
+      .main-content {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+      .sidebar {
+        display: none;
+      }
+    }
+    @media (max-width: 600px) {
+      .header-inner, .main-content {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+      }
+      .main-content {
+        padding-top: 1.2rem;
+        padding-bottom: 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="app.js"></script>
+</body>
+</html>

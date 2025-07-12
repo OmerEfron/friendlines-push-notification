@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "PushNotifications2",
-    "slug": "PushNotifications2",
+    "name": "Friendlines",
+    "slug": "friendlines-expo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,26 +11,29 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.wa2goose.PushNotifications2"
+      "bundleIdentifier": "com.omerefron.friendlines"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "googleServicesFile": "./android/app/google-services.json",
-      "package": "com.wa2goose.PushNotifications2"
+      "googleServicesFile": "./google-services.json",
+      "package": "com.omerefron.friendlines"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "e9370c3c-47e4-477b-9344-1a211f2aead2"
+        "projectId": "bd271d56-0340-41c9-91d8-d9535d8ac2a6"
       }
-    }
+    },
+    "owner": "omerefron"
   }
 }
