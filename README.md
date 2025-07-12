@@ -1,17 +1,17 @@
 # Friendlines - React Native Mobile App
 
-A social news-sharing app built with React Native and Expo, where users can share short news updates (newsflashes) with their friends and groups.
+A mobile news platform built with React Native and Expo, designed to look and feel like a professional news website. Users can write and share headlines with their network in a news-style interface.
 
 ## Features
 
-- **User Authentication**: Login/Register with username and email
-- **Newsflashes**: Create and share short news updates (180 characters max)
-- **Groups**: Share newsflashes with specific groups (Friends, Work, etc.)
-- **Friend System**: Add friends by username or email
-- **Real-time Notifications**: In-app notifications when newsflashes are created
-- **User Profiles**: View profiles, edit bio, see stats
-- **Dark Mode Support**: Automatic theme based on system preference
-- **File-based Database**: JSON database using AsyncStorage (easy to migrate to real DB)
+- **News Website UI**: Professional news site layout with featured articles and sections
+- **Headline Publishing**: Write and publish news headlines (180 characters max)
+- **News Sections**: Organize content by sections (Friends, Work, etc.)
+- **Journalist Network**: Connect with other journalists by username or email
+- **Breaking News Alerts**: In-app notifications when headlines are published
+- **Professional Profiles**: View journalist profiles, bio, and published articles
+- **Dark Mode Support**: News-appropriate dark theme for comfortable reading
+- **Offline-First**: JSON database using AsyncStorage for instant access
 
 ## Getting Started
 
@@ -86,23 +86,23 @@ The app uses AsyncStorage for persistent data storage with the following collect
 
 ## Key Features Implementation
 
-### Creating Newsflashes
-1. Navigate to the "Create" tab
-2. Enter your message (180 character limit)
-3. Select groups and/or friends to send to
-4. Tap "Post" - an in-app notification will appear
+### Publishing Headlines
+1. Navigate to the "Write" tab (✍️)
+2. Compose your headline (180 character limit)
+3. Select news sections and/or specific contacts
+4. Tap "Publish Headline" - breaking news notification appears
 
-### Adding Friends
-1. Go to the "Friends" tab
-2. Search by username or email
-3. Send friend request
-4. Once accepted, you can send newsflashes directly to them
+### Building Your Network
+1. Go to the "Network" tab (🌐)
+2. Search journalists by username or email
+3. Send connection request
+4. Once accepted, share headlines directly with them
 
-### Profile Management
-1. Go to "Profile" tab to view your profile
-2. Edit your bio
-3. View your stats (newsflashes, friends, groups)
-4. Logout from your profile screen
+### News Feed Experience
+1. "Home" tab shows all headlines in news website layout
+2. Featured articles appear with large hero images
+3. Filter by sections using top navigation
+4. Pull to refresh for latest headlines
 
 ## Future Enhancements
 
