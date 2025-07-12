@@ -1,25 +1,25 @@
 export const Colors = {
   light: {
-    primary: '#222',
-    secondary: '#fff',
-    accent: '#e60000',
-    muted: '#f5f5f5',
-    border: '#e0e0e0',
-    text: '#222',
-    background: '#fff',
-    error: '#d32f2f',
-    success: '#388e3c',
+    primary: '#1a1a1a',
+    secondary: '#ffffff',
+    accent: '#dc2626', // News red
+    muted: '#f8f8f8',
+    border: '#e5e5e5',
+    text: '#1a1a1a',
+    background: '#f5f5f5',
+    error: '#dc2626',
+    success: '#16a34a',
   },
   dark: {
-    primary: '#fff',
-    secondary: '#181818',
-    accent: '#e60000',
-    muted: '#232323',
-    border: '#333',
-    text: '#fff',
-    background: '#181818',
-    error: '#f44336',
-    success: '#4caf50',
+    primary: '#ffffff',
+    secondary: '#1f1f1f',
+    accent: '#ef4444', // Brighter red for dark mode
+    muted: '#2a2a2a',
+    border: '#404040',
+    text: '#ffffff',
+    background: '#121212',
+    error: '#ef4444',
+    success: '#22c55e',
   },
 };
 
@@ -40,8 +40,8 @@ export const Typography = {
 };
 
 export const BorderRadius = {
-  small: 5,
-  medium: 10,
-  large: 15,
+  small: 4,
+  medium: 8,
+  large: 12,
   round: 50,
 }; 

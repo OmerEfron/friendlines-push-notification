@@ -20,9 +20,9 @@ interface AppNavigatorProps {
 
 const TabIcon = ({ name, focused, color }: { name: string; focused: boolean; color: string }) => {
   const icons: { [key: string]: string } = {
-    Feed: '📰',
-    Create: '✏️',
-    Friends: '👥',
+    Home: '🏠',
+    Write: '✍️',
+    Network: '🌐',
     Profile: '👤',
   };
   
@@ -43,46 +43,45 @@ const MainTabs = ({ isDarkMode, onNewsflashCreated }: AppNavigatorProps) => {
           <TabIcon name={route.name} focused={focused} color={color} />
         ),
         tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.text + '80',
+        tabBarInactiveTintColor: colors.text + '60',
         tabBarStyle: {
           backgroundColor: colors.secondary,
           borderTopColor: colors.border,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
         },
-        headerStyle: {
-          backgroundColor: colors.secondary,
-          borderBottomWidth: 2,
-          borderBottomColor: colors.accent,
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
         },
-        headerTintColor: colors.text,
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
+        headerShown: false,
       })}
     >
       <Tab.Screen 
-        name="Feed" 
-        options={{ title: 'Feed' }}
+        name="Home" 
+        options={{ title: 'Home' }}
       >
         {() => <FeedScreen isDarkMode={isDarkMode} />}
       </Tab.Screen>
       
       <Tab.Screen 
-        name="Create" 
-        options={{ title: 'New Newsflash' }}
+        name="Write" 
+        options={{ title: 'Write' }}
       >
         {() => <CreateNewsflashScreen isDarkMode={isDarkMode} onNewsflashCreated={onNewsflashCreated} />}
       </Tab.Screen>
       
       <Tab.Screen 
-        name="Friends" 
-        options={{ title: 'Add Friends' }}
+        name="Network" 
+        options={{ title: 'Network' }}
       >
         {() => <AddFriendScreen isDarkMode={isDarkMode} />}
       </Tab.Screen>
       
       <Tab.Screen 
         name="Profile" 
-        options={{ title: 'My Profile' }}
+        options={{ title: 'Profile' }}
       >
         {() => <ProfileScreen isDarkMode={isDarkMode} />}
       </Tab.Screen>
@@ -99,8 +98,16 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ isDarkMode, onNewsfl
         screenOptions={{
           headerStyle: {
             backgroundColor: colors.secondary,
+            elevation: 0,
+            shadowOpacity: 0,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
           },
           headerTintColor: colors.text,
+          headerTitleStyle: {
+            fontWeight: '700',
+            fontSize: 18,
+          },
           cardStyle: {
             backgroundColor: colors.background,
           },
@@ -121,7 +128,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ isDarkMode, onNewsfl
         
         <Stack.Screen 
           name="Profile" 
-          options={{ title: 'Profile' }}
+          options={{ 
+            title: 'Profile',
+            headerBackTitle: 'Back',
+          }}
         >
           {() => <ProfileScreen isDarkMode={isDarkMode} />}
         </Stack.Screen>

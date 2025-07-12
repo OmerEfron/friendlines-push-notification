@@ -7,6 +7,8 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import database from '../services/database';
@@ -70,12 +72,12 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
 
   const handleSubmit = async () => {
     if (!text.trim()) {
-      Alert.alert('Error', 'Please enter some text');
+      Alert.alert('Missing Headline', 'Please write your news headline');
       return;
     }
 
     if (selectedGroups.length === 0 && selectedFriends.length === 0) {
-      Alert.alert('Error', 'Please select at least one group or friend');
+      Alert.alert('Select Audience', 'Please select at least one section or contact');
       return;
     }
 
@@ -91,117 +93,179 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
 
       // Show notification
       onNewsflashCreated(
-        'Newsflash Created!',
-        `Your newsflash has been sent to ${selectedGroups.length} groups and ${selectedFriends.length} friends.`
+        'Published!',
+        `Your headline has been published to ${selectedGroups.length} sections and ${selectedFriends.length} contacts.`
       );
 
       // Navigate back
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', 'Failed to create newsflash');
+      Alert.alert('Error', 'Failed to publish headline');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <ScrollView
+    <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.content}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <Text style={[styles.title, { color: colors.text }]}>Create Newsflash</Text>
-
-      <View style={styles.section}>
-        <Text style={[styles.label, { color: colors.text }]}>Text</Text>
-        <TextInput
-          style={[
-            styles.textInput,
-            {
-              backgroundColor: colors.muted,
-              color: colors.text,
-              borderColor: colors.border,
-            },
-          ]}
-          placeholder="What's happening?"
-          placeholderTextColor={colors.text + '80'}
-          value={text}
-          onChangeText={setText}
-          multiline
-          maxLength={180}
-        />
-        <Text style={[styles.charCount, { color: colors.text }]}>
-          {text.length}/180
-        </Text>
-      </View>
-
-      {groups.length > 0 && (
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.text }]}>Send to Groups</Text>
-          <View style={styles.optionsList}>
-            {groups.map(group => (
-              <TouchableOpacity
-                key={group.id}
-                style={[
-                  styles.option,
-                  selectedGroups.includes(group.id) && styles.optionSelected,
-                  { borderColor: colors.border },
-                ]}
-                onPress={() => toggleGroup(group.id)}
-              >
-                <View
-                  style={[styles.checkbox, selectedGroups.includes(group.id) && styles.checkboxSelected]}
-                />
-                <Text style={[styles.optionText, { color: colors.text }]}>
-                  {group.name}
-                </Text>
-                <View
-                  style={[styles.colorIndicator, { backgroundColor: group.color }]}
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {friends.length > 0 && (
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.text }]}>Send to Friends</Text>
-          <View style={styles.optionsList}>
-            {friends.map(friend => (
-              <TouchableOpacity
-                key={friend.id}
-                style={[
-                  styles.option,
-                  selectedFriends.includes(friend.id) && styles.optionSelected,
-                  { borderColor: colors.border },
-                ]}
-                onPress={() => toggleFriend(friend.id)}
-              >
-                <View
-                  style={[styles.checkbox, selectedFriends.includes(friend.id) && styles.checkboxSelected]}
-                />
-                <Text style={[styles.optionText, { color: colors.text }]}>
-                  {friend.name}
-                </Text>
-                <Text style={styles.friendAvatar}>{friend.avatar}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      )}
-
-      <TouchableOpacity
-        style={[
-          styles.submitButton,
-          { backgroundColor: colors.accent },
-          isLoading && styles.buttonDisabled,
-        ]}
-        onPress={handleSubmit}
-        disabled={isLoading}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.submitButtonText}>Post</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>Write Headline</Text>
+          <Text style={[styles.subtitle, { color: colors.text }]}>
+            Share breaking news with your network
+          </Text>
+        </View>
+
+        {/* Headline Input */}
+        <View style={styles.section}>
+          <View style={styles.labelRow}>
+            <Text style={[styles.label, { color: colors.text }]}>Headline</Text>
+            <Text style={[styles.charCount, { color: colors.text }]}>
+              {text.length}/180
+            </Text>
+          </View>
+          <TextInput
+            style={[
+              styles.headlineInput,
+              {
+                backgroundColor: colors.secondary,
+                color: colors.text,
+                borderColor: colors.border,
+              },
+            ]}
+            placeholder="Enter your news headline..."
+            placeholderTextColor={colors.text + '60'}
+            value={text}
+            onChangeText={setText}
+            multiline
+            maxLength={180}
+          />
+          <Text style={[styles.hint, { color: colors.text }]}>
+            Make it concise and attention-grabbing
+          </Text>
+        </View>
+
+        {/* Distribution */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Publish To
+          </Text>
+          
+          {groups.length > 0 && (
+            <View style={styles.subsection}>
+              <Text style={[styles.subsectionTitle, { color: colors.text }]}>
+                News Sections
+              </Text>
+              {groups.map(group => (
+                <TouchableOpacity
+                  key={group.id}
+                  style={[
+                    styles.selectionItem,
+                    { borderColor: colors.border },
+                    selectedGroups.includes(group.id) && {
+                      borderColor: colors.accent,
+                      backgroundColor: colors.accent + '10',
+                    },
+                  ]}
+                  onPress={() => toggleGroup(group.id)}
+                >
+                  <View style={styles.selectionContent}>
+                    <View
+                      style={[
+                        styles.colorDot,
+                        { backgroundColor: group.color },
+                      ]}
+                    />
+                    <Text style={[styles.selectionText, { color: colors.text }]}>
+                      {group.name}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.checkbox,
+                      { borderColor: colors.border },
+                      selectedGroups.includes(group.id) && {
+                        backgroundColor: colors.accent,
+                        borderColor: colors.accent,
+                      },
+                    ]}
+                  >
+                    {selectedGroups.includes(group.id) && (
+                      <Text style={styles.checkmark}>✓</Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {friends.length > 0 && (
+            <View style={styles.subsection}>
+              <Text style={[styles.subsectionTitle, { color: colors.text }]}>
+                Direct to Contacts
+              </Text>
+              {friends.map(friend => (
+                <TouchableOpacity
+                  key={friend.id}
+                  style={[
+                    styles.selectionItem,
+                    { borderColor: colors.border },
+                    selectedFriends.includes(friend.id) && {
+                      borderColor: colors.accent,
+                      backgroundColor: colors.accent + '10',
+                    },
+                  ]}
+                  onPress={() => toggleFriend(friend.id)}
+                >
+                  <View style={styles.selectionContent}>
+                    <Text style={styles.friendAvatar}>{friend.avatar}</Text>
+                    <Text style={[styles.selectionText, { color: colors.text }]}>
+                      {friend.name}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.checkbox,
+                      { borderColor: colors.border },
+                      selectedFriends.includes(friend.id) && {
+                        backgroundColor: colors.accent,
+                        borderColor: colors.accent,
+                      },
+                    ]}
+                  >
+                    {selectedFriends.includes(friend.id) && (
+                      <Text style={styles.checkmark}>✓</Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Submit Button */}
+        <TouchableOpacity
+          style={[
+            styles.publishButton,
+            { backgroundColor: colors.accent },
+            isLoading && styles.buttonDisabled,
+          ]}
+          onPress={handleSubmit}
+          disabled={isLoading}
+        >
+          <Text style={styles.publishButtonText}>
+            {isLoading ? 'Publishing...' : 'Publish Headline'}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -210,73 +274,108 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: Spacing.md,
+    padding: Spacing.lg,
+  },
+  header: {
+    marginBottom: Spacing.xl,
   },
   title: {
-    ...Typography.h2,
-    marginBottom: Spacing.lg,
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: Spacing.xs,
+  },
+  subtitle: {
+    fontSize: 16,
+    opacity: 0.7,
   },
   section: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
-  label: {
-    ...Typography.body,
-    fontWeight: 'bold',
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
     marginBottom: Spacing.sm,
   },
-  textInput: {
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  charCount: {
+    fontSize: 14,
+    opacity: 0.6,
+  },
+  headlineInput: {
+    borderWidth: 1,
     borderRadius: BorderRadius.medium,
     padding: Spacing.md,
     minHeight: 100,
+    fontSize: 18,
+    lineHeight: 26,
     textAlignVertical: 'top',
-    fontSize: 16,
-    borderWidth: 1,
   },
-  charCount: {
-    ...Typography.caption,
-    textAlign: 'right',
+  hint: {
+    fontSize: 14,
+    opacity: 0.6,
     marginTop: Spacing.xs,
   },
-  optionsList: {
-    gap: Spacing.sm,
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: Spacing.md,
   },
-  option: {
+  subsection: {
+    marginBottom: Spacing.lg,
+  },
+  subsectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: Spacing.sm,
+    opacity: 0.7,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  selectionItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: Spacing.md,
-    borderRadius: BorderRadius.medium,
     borderWidth: 1,
+    borderRadius: BorderRadius.medium,
     marginBottom: Spacing.sm,
   },
-  optionSelected: {
-    borderColor: Colors.light.accent,
-    backgroundColor: Colors.light.accent + '10',
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: Colors.light.border,
-    marginRight: Spacing.sm,
-  },
-  checkboxSelected: {
-    backgroundColor: Colors.light.accent,
-    borderColor: Colors.light.accent,
-  },
-  optionText: {
-    ...Typography.body,
+  selectionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
   },
-  colorIndicator: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  colorDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: Spacing.sm,
   },
   friendAvatar: {
-    fontSize: 24,
+    fontSize: 20,
+    marginRight: Spacing.sm,
   },
-  submitButton: {
+  selectionText: {
+    fontSize: 16,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderRadius: BorderRadius.small,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmark: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  publishButton: {
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.medium,
     alignItems: 'center',
@@ -285,9 +384,9 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.6,
   },
-  submitButtonText: {
+  publishButtonText: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 }); 
