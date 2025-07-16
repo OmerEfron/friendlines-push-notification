@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Group, Newsflash, FriendRequest } from '../types';
 import pushNotificationService from './pushNotification';
+import socketService from './socket';
 import * as Notifications from 'expo-notifications';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.132:3000/api/v1';
@@ -138,6 +139,14 @@ class DatabaseService {
       });
 
       if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.indexOf('application/json') !== -1) {
+          const error = await response.json();
+          console.error('Login failed:', error);
+        } else {
+          const errorText = await response.text();
+          console.error('Login failed with non-JSON response:', errorText);
+        }
         return null;
       }
 
@@ -147,13 +156,8 @@ class DatabaseService {
       this.authToken = data.token;
       await AsyncStorage.setItem('authToken', data.token);
       
-      // Store current user
-      await AsyncStorage.setItem('currentUser', JSON.stringify(data.user));
-      
-      // Register push token after successful login
-      await this.registerPushTokenIfNeeded();
-
-      return {
+      // Convert backend user to frontend User type
+      const user: User = {
         id: data.user.id.toString(),
         username: data.user.username,
         email: data.user.email,
@@ -163,15 +167,23 @@ class DatabaseService {
         friends: [],
         groups: [],
       };
+      
+      // Store current user
+      await AsyncStorage.setItem('currentUser', JSON.stringify(user));
+      
+      // Register push token after successful login
+      await this.registerPushTokenIfNeeded();
+
+      // Fetch additional user data (friends and groups)
+      await this.loadUserRelations(user.id);
+
+      // Connect socket for real-time updates
+      await socketService.connect();
+
+      return user;
     } catch (error) {
       console.error('Login error:', error);
-      // Fallback to mock login for development
-      await this.loadDatabase();
-      const user = this.db.users.find(u => u.username === username);
-      if (user) {
-        await AsyncStorage.setItem('currentUser', JSON.stringify(user));
-      }
-      return user || null;
+      throw error;
     }
   }
 
@@ -182,12 +194,57 @@ class DatabaseService {
         await pushNotificationService.unregisterPushToken(this.authToken);
       }
       
+      // Disconnect socket
+      socketService.disconnect();
+      
       // Clear auth data
       await AsyncStorage.removeItem('authToken');
       await AsyncStorage.removeItem('currentUser');
       this.authToken = null;
     } catch (error) {
       console.error('Logout error:', error);
+    }
+  }
+
+  private async loadUserRelations(userId: string): Promise<void> {
+    if (!this.authToken) return;
+
+    try {
+      // Fetch user's friends
+      const friendsResponse = await fetch(`${API_URL}/users/friends`, {
+        headers: {
+          'Authorization': `Bearer ${this.authToken}`,
+        },
+      });
+
+      if (friendsResponse.ok) {
+        const { friends } = await friendsResponse.json();
+        // Update local user data with friends
+        const currentUser = await this.getCurrentUser();
+        if (currentUser) {
+          currentUser.friends = friends.map((f: any) => f.id.toString());
+          await AsyncStorage.setItem('currentUser', JSON.stringify(currentUser));
+        }
+      }
+
+      // Fetch user's groups
+      const groupsResponse = await fetch(`${API_URL}/groups`, {
+        headers: {
+          'Authorization': `Bearer ${this.authToken}`,
+        },
+      });
+
+      if (groupsResponse.ok) {
+        const { groups } = await groupsResponse.json();
+        // Update local user data with groups
+        const currentUser = await this.getCurrentUser();
+        if (currentUser) {
+          currentUser.groups = groups.filter((g: any) => g.is_member).map((g: any) => g.id.toString());
+          await AsyncStorage.setItem('currentUser', JSON.stringify(currentUser));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load user relations:', error);
     }
   }
 
@@ -202,7 +259,16 @@ class DatabaseService {
       });
 
       if (!response.ok) {
-        return null;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.indexOf('application/json') !== -1) {
+          const error = await response.json();
+          console.error('Registration failed:', error);
+          throw new Error(error.message || 'Registration failed');
+        } else {
+          const errorText = await response.text();
+          console.error('Registration failed with non-JSON response:', errorText);
+          throw new Error('Registration failed: Invalid server response');
+        }
       }
 
       const data = await response.json();
@@ -211,40 +277,28 @@ class DatabaseService {
       this.authToken = data.token;
       await AsyncStorage.setItem('authToken', data.token);
       
-      // Store current user
-      await AsyncStorage.setItem('currentUser', JSON.stringify(data.user));
-      
-      // Register push token after successful registration
-      await this.registerPushTokenIfNeeded();
-
-      return {
+      // Convert backend user to frontend User type
+      const user: User = {
         id: data.user.id.toString(),
         username: data.user.username,
         email: data.user.email,
         displayName: data.user.display_name,
         bio: '',
-        profilePicture: `https://i.pravatar.cc/150?u=${data.user.username}`,
+        profilePicture: data.user.profile_picture || `https://i.pravatar.cc/150?u=${data.user.username}`,
         friends: [],
         groups: [],
       };
+      
+      // Store current user
+      await AsyncStorage.setItem('currentUser', JSON.stringify(user));
+      
+      // Register push token after successful registration
+      await this.registerPushTokenIfNeeded();
+
+      return user;
     } catch (error) {
       console.error('Registration error:', error);
-      // Fallback to mock registration
-      await this.loadDatabase();
-      const newUser: User = {
-        id: Date.now().toString(),
-        username,
-        email,
-        displayName,
-        bio: '',
-        profilePicture: `https://i.pravatar.cc/150?u=${username}`,
-        friends: [],
-        groups: [],
-      };
-      this.db.users.push(newUser);
-      await this.saveDatabase();
-      await AsyncStorage.setItem('currentUser', JSON.stringify(newUser));
-      return newUser;
+      throw error;
     }
   }
 
@@ -473,11 +527,56 @@ class DatabaseService {
     authorId: string,
     content: string,
     sections: string[],
-    recipients: string[]
+    recipients: string[],
+    imageUri?: string
   ): Promise<Newsflash> {
-    if (this.authToken) {
-      try {
-        const response = await fetch(`${API_URL}/newsflashes`, {
+    if (!this.authToken) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      console.log('Creating newsflash with:', {
+        content,
+        sections,
+        recipients,
+        hasImage: !!imageUri
+      });
+
+      // Use FormData for multipart upload if image is provided
+      let response;
+      
+      if (imageUri) {
+        const formData = new FormData();
+        formData.append('content', content);
+        
+        // Send empty arrays as empty JSON arrays
+        formData.append('sections', '[]');
+        formData.append('recipients', JSON.stringify(recipients.map(id => parseInt(id))));
+        formData.append('groups', '[]');
+        
+        // Add image using React Native FormData format
+        const file = {
+          uri: imageUri,
+          type: 'image/jpeg',
+          name: 'newsflash_image.jpg',
+        } as any;
+        
+        formData.append('image', file);
+        
+        console.log('Sending newsflash with image via FormData');
+        
+        response = await fetch(`${API_URL}/newsflashes`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.authToken}`,
+            'Accept': 'application/json',
+          },
+          body: formData,
+        });
+      } else {
+        console.log('Sending newsflash without image');
+        
+        response = await fetch(`${API_URL}/newsflashes`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -485,45 +584,39 @@ class DatabaseService {
           },
           body: JSON.stringify({
             content,
-            sections,
+            sections: [],
             recipients: recipients.map(id => parseInt(id)),
-            groups: [], // Add group support later
+            groups: [],
           }),
         });
-
-        if (response.ok) {
-          const data = await response.json();
-          return {
-            id: data.newsflash.id.toString(),
-            authorId: data.newsflash.author_id.toString(),
-            content: data.newsflash.content,
-            sections: data.newsflash.sections || [],
-            recipients,
-            createdAt: new Date(data.newsflash.created_at),
-            likes: 0,
-            comments: 0,
-          };
-        }
-      } catch (error) {
-        console.error('Create newsflash error:', error);
       }
-    }
 
-    // Fallback to local
-    await this.loadDatabase();
-    const newsflash: Newsflash = {
-      id: Date.now().toString(),
-      authorId,
-      content,
-      sections,
-      recipients,
-      createdAt: new Date(),
-      likes: 0,
-      comments: 0,
-    };
-    this.db.newsflashes.unshift(newsflash);
-    await this.saveDatabase();
-    return newsflash;
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Server error response:', errorText);
+        throw new Error('Failed to create newsflash');
+      }
+
+      const data = await response.json();
+      console.log('Newsflash created successfully:', data);
+      
+      return {
+        id: data.newsflash.id.toString(),
+        authorId: data.newsflash.author_id.toString(),
+        content: data.newsflash.content,
+        sections: data.newsflash.sections || [],
+        recipients,
+        createdAt: new Date(data.newsflash.created_at),
+        likes: data.newsflash.like_count || 0,
+        comments: data.newsflash.comment_count || 0,
+        image: data.newsflash.image,
+      };
+    } catch (error) {
+      console.error('Create newsflash error:', error);
+      throw error;
+    }
   }
 
   async getNewsflashes(userId: string): Promise<Newsflash[]> {

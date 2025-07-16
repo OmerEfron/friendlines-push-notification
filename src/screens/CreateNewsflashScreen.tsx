@@ -9,10 +9,12 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { launchImageLibrary, ImagePickerResponse, MediaType, ImageLibraryOptions } from 'react-native-image-picker';
 import database from '../services/database';
-import { Colors, Spacing, Typography, BorderRadius } from '../constants/theme';
+import { Colors, Spacing, Typography, BorderRadius, Shadow } from '../constants/theme';
 import { User, Group } from '../types';
 
 interface CreateNewsflashScreenProps {
@@ -26,6 +28,7 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
 }) => {
   const navigation = useNavigation();
   const [text, setText] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [friends, setFriends] = useState<User[]>([]);
@@ -70,43 +73,83 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
     );
   };
 
+  const pickImage = async () => {
+    const options: ImageLibraryOptions = {
+      mediaType: 'photo' as MediaType,
+      quality: 0.8 as any,
+      includeBase64: false,
+      maxWidth: 1200,
+      maxHeight: 1200,
+    };
+
+    launchImageLibrary(options, (response: ImagePickerResponse) => {
+      if (response.didCancel) {
+        return;
+      }
+      
+      if (response.errorCode) {
+        if (response.errorCode === 'permission') {
+          Alert.alert(
+            'Permission Needed 📸',
+            'Please allow access to your photos in Settings to add images to your posts.'
+          );
+        } else {
+          Alert.alert('Error', 'Failed to pick image');
+        }
+        return;
+      }
+
+      if (response.assets && response.assets[0]) {
+        const imageUri = response.assets[0].uri;
+        if (imageUri) {
+          setSelectedImage(imageUri);
+        }
+      }
+    });
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+  };
+
   const handleSubmit = async () => {
     if (!text.trim()) {
-      Alert.alert('Missing Headline', 'Please write your news headline');
+      Alert.alert('Missing Content', 'Please write something to share!');
+      return;
+    }
+
+    if (text.trim().length < 10) {
+      Alert.alert('Too Short', 'Your message needs to be at least 10 characters long.');
       return;
     }
 
     if (selectedGroups.length === 0 && selectedFriends.length === 0) {
-      Alert.alert('Select Audience', 'Please select at least one section or contact');
+      Alert.alert('Select Recipients', 'Please select at least one group or friend to share with');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Prepare recipients list - combine groups and friends
       const recipients: string[] = [...selectedFriends];
-      
-      // For groups, we'll handle them separately in the future
-      // For now, just use friend IDs as recipients
       
       const newsflash = await database.createNewsflash(
         currentUser!.id,
         text.trim(),
         [], // sections - empty for now
-        recipients
+        recipients,
+        selectedImage || undefined
       );
 
-      // Show notification
       onNewsflashCreated(
-        'Published!',
-        `Your headline has been published to ${selectedGroups.length} sections and ${selectedFriends.length} contacts.`
+        'Posted Successfully! 🎉',
+        `Your post has been shared with ${selectedGroups.length} groups and ${selectedFriends.length} friends.`
       );
 
-      // Navigate back
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', 'Failed to publish headline');
+      console.error('Create newsflash error:', error);
+      Alert.alert('Error', 'Failed to create post. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -123,135 +166,126 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Write Headline</Text>
-          <Text style={[styles.subtitle, { color: colors.text }]}>
-            Share breaking news with your network
+          <Text style={[styles.title, { color: colors.text }]}>Share Your Thoughts</Text>
+          <Text style={[styles.subtitle, { color: colors.secondaryText }]}>
+            What's on your mind today? ✨
           </Text>
         </View>
 
-        {/* Headline Input */}
-        <View style={styles.section}>
-          <View style={styles.labelRow}>
-            <Text style={[styles.label, { color: colors.text }]}>Headline</Text>
-            <Text style={[styles.charCount, { color: colors.text }]}>
-              {text.length}/180
-            </Text>
-          </View>
+        {/* Message Input */}
+        <View style={[styles.section, { backgroundColor: colors.cardBackground }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Message</Text>
           <TextInput
             style={[
-              styles.headlineInput,
+              styles.messageInput,
               {
-                backgroundColor: colors.secondary,
                 color: colors.text,
                 borderColor: colors.border,
               },
             ]}
-            placeholder="Enter your news headline..."
-            placeholderTextColor={colors.text + '60'}
+            placeholder="Share something interesting, funny, or inspiring..."
+            placeholderTextColor={colors.secondaryText}
             value={text}
             onChangeText={setText}
             multiline
-            maxLength={180}
+            maxLength={280}
+            textAlignVertical="top"
           />
-          <Text style={[styles.hint, { color: colors.text }]}>
-            Make it concise and attention-grabbing
-          </Text>
+          <View style={styles.inputFooter}>
+            <Text style={[styles.charCount, { color: colors.secondaryText }]}>
+              {text.length}/280
+            </Text>
+          </View>
         </View>
 
-        {/* Distribution */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Publish To
-          </Text>
+        {/* Image Section */}
+        <View style={[styles.section, { backgroundColor: colors.cardBackground }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Add Photo (Optional)</Text>
           
-          {groups.length > 0 && (
-            <View style={styles.subsection}>
-              <Text style={[styles.subsectionTitle, { color: colors.text }]}>
-                News Sections
+          {selectedImage ? (
+            <View style={styles.imageContainer}>
+              <Image source={{ uri: selectedImage }} style={styles.selectedImage} />
+              <TouchableOpacity
+                style={styles.removeImageButton}
+                onPress={removeImage}
+              >
+                <Text style={styles.removeImageText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.imagePickerButton, { borderColor: colors.border }]}
+              onPress={pickImage}
+            >
+              <Text style={styles.imagePickerIcon}>📷</Text>
+              <Text style={[styles.imagePickerText, { color: colors.text }]}>
+                Add a photo to your post
               </Text>
-              {groups.map(group => (
-                <TouchableOpacity
-                  key={group.id}
-                  style={[
-                    styles.selectionItem,
-                    { borderColor: colors.border },
-                    selectedGroups.includes(group.id) && {
-                      borderColor: colors.accent,
-                      backgroundColor: colors.accent + '10',
-                    },
-                  ]}
-                  onPress={() => toggleGroup(group.id)}
-                >
-                  <View style={styles.selectionContent}>
-                    <View
-                      style={[
-                        styles.colorDot,
-                        { backgroundColor: colors.primary },
-                      ]}
-                    />
-                    <Text style={[styles.selectionText, { color: colors.text }]}>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Recipients Section */}
+        <View style={[styles.section, { backgroundColor: colors.cardBackground }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Share With</Text>
+          
+          {/* Groups */}
+          {groups.length > 0 && (
+            <View style={styles.recipientCategory}>
+              <Text style={[styles.categoryTitle, { color: colors.text }]}>Groups</Text>
+              <View style={styles.chipContainer}>
+                {groups.map(group => (
+                  <TouchableOpacity
+                    key={group.id}
+                    style={[
+                      styles.chip,
+                      selectedGroups.includes(group.id.toString()) && [
+                        styles.chipSelected,
+                        { backgroundColor: colors.accent }
+                      ],
+                      { borderColor: colors.border }
+                    ]}
+                    onPress={() => toggleGroup(group.id.toString())}
+                  >
+                    <Text style={[
+                      styles.chipText,
+                      { color: selectedGroups.includes(group.id.toString()) ? '#FFFFFF' : colors.text }
+                    ]}>
                       {group.name}
                     </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.checkbox,
-                      { borderColor: colors.border },
-                      selectedGroups.includes(group.id) && {
-                        backgroundColor: colors.accent,
-                        borderColor: colors.accent,
-                      },
-                    ]}
-                  >
-                    {selectedGroups.includes(group.id) && (
-                      <Text style={styles.checkmark}>✓</Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           )}
 
+          {/* Friends */}
           {friends.length > 0 && (
-            <View style={styles.subsection}>
-              <Text style={[styles.subsectionTitle, { color: colors.text }]}>
-                Direct to Contacts
-              </Text>
-              {friends.map(friend => (
-                <TouchableOpacity
-                  key={friend.id}
-                  style={[
-                    styles.selectionItem,
-                    { borderColor: colors.border },
-                    selectedFriends.includes(friend.id) && {
-                      borderColor: colors.accent,
-                      backgroundColor: colors.accent + '10',
-                    },
-                  ]}
-                  onPress={() => toggleFriend(friend.id)}
-                >
-                  <View style={styles.selectionContent}>
-                    <Text style={styles.friendAvatar}>👤</Text>
-                    <Text style={[styles.selectionText, { color: colors.text }]}>
+            <View style={styles.recipientCategory}>
+              <Text style={[styles.categoryTitle, { color: colors.text }]}>Friends</Text>
+              <View style={styles.chipContainer}>
+                {friends.map(friend => (
+                  <TouchableOpacity
+                    key={friend.id}
+                    style={[
+                      styles.chip,
+                      selectedFriends.includes(friend.id.toString()) && [
+                        styles.chipSelected,
+                        { backgroundColor: colors.accent }
+                      ],
+                      { borderColor: colors.border }
+                    ]}
+                    onPress={() => toggleFriend(friend.id.toString())}
+                  >
+                    <Text style={[
+                      styles.chipText,
+                      { color: selectedFriends.includes(friend.id.toString()) ? '#FFFFFF' : colors.text }
+                    ]}>
                       {friend.displayName}
                     </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.checkbox,
-                      { borderColor: colors.border },
-                      selectedFriends.includes(friend.id) && {
-                        backgroundColor: colors.accent,
-                        borderColor: colors.accent,
-                      },
-                    ]}
-                  >
-                    {selectedFriends.includes(friend.id) && (
-                      <Text style={styles.checkmark}>✓</Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           )}
         </View>
@@ -259,15 +293,15 @@ export const CreateNewsflashScreen: React.FC<CreateNewsflashScreenProps> = ({
         {/* Submit Button */}
         <TouchableOpacity
           style={[
-            styles.publishButton,
+            styles.submitButton,
             { backgroundColor: colors.accent },
-            isLoading && styles.buttonDisabled,
+            (isLoading || !text.trim()) && styles.submitButtonDisabled
           ]}
           onPress={handleSubmit}
-          disabled={isLoading}
+          disabled={isLoading || !text.trim()}
         >
-          <Text style={styles.publishButtonText}>
-            {isLoading ? 'Publishing...' : 'Publish Headline'}
+          <Text style={styles.submitButtonText}>
+            {isLoading ? 'Posting...' : 'Share Post'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -283,116 +317,123 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
   },
   header: {
+    alignItems: 'center',
     marginBottom: Spacing.xl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: Spacing.xs,
+    ...Typography.h2,
+    marginBottom: Spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    opacity: 0.7,
+    ...Typography.body,
+    textAlign: 'center',
   },
   section: {
-    marginBottom: Spacing.xl,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: Spacing.sm,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  charCount: {
-    fontSize: 14,
-    opacity: 0.6,
-  },
-  headlineInput: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.medium,
-    padding: Spacing.md,
-    minHeight: 100,
-    fontSize: 18,
-    lineHeight: 26,
-    textAlignVertical: 'top',
-  },
-  hint: {
-    fontSize: 14,
-    opacity: 0.6,
-    marginTop: Spacing.xs,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    ...Shadow.small,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...Typography.h4,
     marginBottom: Spacing.md,
   },
-  subsection: {
-    marginBottom: Spacing.lg,
-  },
-  subsectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: Spacing.sm,
-    opacity: 0.7,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  selectionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
+  messageInput: {
     borderWidth: 1,
     borderRadius: BorderRadius.medium,
-    marginBottom: Spacing.sm,
-  },
-  selectionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  colorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: Spacing.sm,
-  },
-  friendAvatar: {
-    fontSize: 20,
-    marginRight: Spacing.sm,
-  },
-  selectionText: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
     fontSize: 16,
+    minHeight: 120,
+    backgroundColor: Colors.light.background,
   },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderWidth: 2,
-    borderRadius: BorderRadius.small,
-    alignItems: 'center',
+  inputFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: Spacing.sm,
+  },
+  charCount: {
+    ...Typography.caption,
+  },
+  imageContainer: {
+    position: 'relative',
+    marginBottom: Spacing.md,
+  },
+  selectedImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: BorderRadius.medium,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: Spacing.sm,
+    right: Spacing.sm,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: BorderRadius.round,
+    width: 30,
+    height: 30,
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  checkmark: {
-    color: '#fff',
+  removeImageText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  publishButton: {
-    paddingVertical: Spacing.md,
+  imagePickerButton: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: BorderRadius.medium,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.light.background,
+  },
+  imagePickerIcon: {
+    fontSize: 32,
+    marginBottom: Spacing.sm,
+  },
+  imagePickerText: {
+    ...Typography.body,
+    textAlign: 'center',
+  },
+  recipientCategory: {
+    marginBottom: Spacing.lg,
+  },
+  categoryTitle: {
+    ...Typography.h4,
+    marginBottom: Spacing.md,
+  },
+  chipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  chip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    backgroundColor: Colors.light.background,
+  },
+  chipSelected: {
+    borderColor: 'transparent',
+  },
+  chipText: {
+    ...Typography.captionMedium,
+  },
+  submitButton: {
+    paddingVertical: Spacing.lg,
     borderRadius: BorderRadius.medium,
     alignItems: 'center',
     marginTop: Spacing.md,
+    ...Shadow.medium,
   },
-  buttonDisabled: {
+  submitButtonDisabled: {
     opacity: 0.6,
   },
-  publishButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
+  submitButtonText: {
+    color: '#FFFFFF',
+    ...Typography.bodyMedium,
   },
 }); 

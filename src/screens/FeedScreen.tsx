@@ -7,10 +7,14 @@ import {
   RefreshControl,
   ScrollView,
   TouchableOpacity,
+  TextInput,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import database from '../services/database';
+import socketService from '../services/socket';
 import { NewsflashCard } from '../components/NewsflashCard';
-import { Colors, Spacing, Typography } from '../constants/theme';
+import { Colors, Spacing, Typography, BorderRadius, Shadow } from '../constants/theme';
 import { Newsflash, User, Group } from '../types';
 
 interface FeedScreenProps {
@@ -18,12 +22,14 @@ interface FeedScreenProps {
 }
 
 export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
+  const navigation = useNavigation<any>();
   const [newsflashes, setNewsflashes] = useState<Newsflash[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedSection, setSelectedSection] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const colors = isDarkMode ? Colors.dark : Colors.light;
 
@@ -54,10 +60,16 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
   const getFilteredNewsflashes = () => {
     let filtered = [...newsflashes];
     
+    // Filter by search query
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(n => 
+        n.content.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
     if (selectedSection !== 'all') {
       filtered = filtered.filter(n => {
         // Check if this newsflash belongs to the selected group
-        // Since we're using recipients now, we need to check if group members are in recipients
         const group = groups.find(g => g.id === selectedSection);
         if (!group) return false;
         
@@ -72,6 +84,25 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
     filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     
     return filtered;
+  };
+
+  const handleLike = async (newsflashId: string) => {
+    try {
+      // TODO: Implement like API call
+      console.log('Like newsflash:', newsflashId);
+      // For now, just refresh the feed
+      await loadData();
+    } catch (error) {
+      console.error('Failed to like newsflash:', error);
+    }
+  };
+
+  const handleComment = (newsflashId: string) => {
+    navigation.navigate('Comments', { newsflashId });
+  };
+
+  const handleShareThoughts = () => {
+    navigation.navigate('Write');
   };
 
   const renderNewsflash = ({ item, index }: { item: Newsflash; index: number }) => {
@@ -95,7 +126,9 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
         groups={itemGroups}
         friends={itemFriends}
         isDarkMode={isDarkMode}
-        isFeatured={index === 0 && selectedSection === 'all'}
+        isFeatured={false}
+        onLike={() => handleLike(item.id)}
+        onComment={() => handleComment(item.id)}
       />
     );
   };
@@ -104,7 +137,8 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
 
   // Section navigation
   const sections = [
-    { id: 'all', name: 'Main', icon: '🏠' },
+    { id: 'all', name: 'Group Feeds', icon: '👥' },
+    { id: 'personal', name: 'Personal Feeds', icon: '👤' },
     ...groups.filter(g => currentUser?.groups?.includes(g.id) || false).map(g => ({
       id: g.id.toString(),
       name: g.name,
@@ -112,15 +146,31 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
     })),
   ];
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Compact Header */}
-      <View style={[styles.header, { backgroundColor: colors.secondary }]}>
-        <Text style={[styles.logoText, { color: colors.accent }]}>FRIENDLINES</Text>
+  const renderHeader = () => (
+    <View style={[styles.headerContainer, { backgroundColor: colors.cardBackground }]}>
+      {/* Main Header */}
+      <View style={styles.mainHeader}>
+        <Text style={[styles.logoText, { color: colors.text }]}>
+          😊 FriendLines
+        </Text>
+        <TouchableOpacity style={styles.searchIcon}>
+          <Text style={styles.searchIconText}>🔍</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Search Bar */}
+      <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
+        <TextInput
+          style={[styles.searchInput, { color: colors.text }]}
+          placeholder="Search funny news"
+          placeholderTextColor={colors.secondaryText}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
       </View>
 
       {/* Section Navigation */}
-      <View style={[styles.sectionNav, { backgroundColor: colors.secondary }]}>
+      <View style={styles.sectionNav}>
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
@@ -131,7 +181,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
               key={section.id}
               style={[
                 styles.sectionButton,
-                selectedSection === section.id && styles.sectionButtonActive,
+                { backgroundColor: selectedSection === section.id ? colors.accent : colors.background },
               ]}
               onPress={() => setSelectedSection(section.id)}
             >
@@ -139,8 +189,8 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
                 style={[
                   styles.sectionText,
                   { 
-                    color: selectedSection === section.id ? colors.accent : colors.text,
-                    fontWeight: selectedSection === section.id ? '700' : '400',
+                    color: selectedSection === section.id ? '#FFFFFF' : colors.text,
+                    fontWeight: selectedSection === section.id ? '600' : '400',
                   },
                 ]}
               >
@@ -150,7 +200,24 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
           ))}
         </ScrollView>
       </View>
+    </View>
+  );
 
+  const renderFooter = () => (
+    <View style={styles.footerContainer}>
+      <TouchableOpacity
+        style={[styles.shareButton, { backgroundColor: colors.accent }]}
+        onPress={handleShareThoughts}
+      >
+        <Text style={styles.shareButtonText}>Share Your Thoughts!</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+      {renderHeader()}
+      
       {/* News Feed */}
       <FlatList
         data={filteredNewsflashes}
@@ -167,14 +234,15 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ isDarkMode }) => {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: colors.text }]}>
-              אין חדשות עדיין
+              No posts yet! Share something fun! 🎉
             </Text>
           </View>
         }
-        ItemSeparatorComponent={() => null}
+        ListFooterComponent={renderFooter}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -182,51 +250,90 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingTop: 10,
-    paddingBottom: 10,
-    paddingHorizontal: 16,
-    borderBottomWidth: 2,
-    borderBottomColor: Colors.light.accent,
+  headerContainer: {
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
+    ...Shadow.small,
+  },
+  mainHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   logoText: {
-    fontSize: 24,
-    fontWeight: '900',
-    letterSpacing: 1,
-    textAlign: 'center',
+    ...Typography.h2,
+    fontWeight: '700',
+  },
+  searchIcon: {
+    padding: Spacing.sm,
+  },
+  searchIconText: {
+    fontSize: 20,
+  },
+  searchContainer: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  searchInput: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    fontSize: 16,
   },
   sectionNav: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    paddingHorizontal: Spacing.lg,
   },
   sectionNavContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingRight: Spacing.lg,
   },
   sectionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    marginRight: 8,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
-  },
-  sectionButtonActive: {
-    backgroundColor: Colors.light.accent + '15',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginRight: Spacing.sm,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
   },
   sectionText: {
-    fontSize: 14,
+    ...Typography.captionMedium,
   },
   listContent: {
-    paddingBottom: 20,
+    paddingBottom: Spacing.xl,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: Colors.light.border,
+    marginVertical: Spacing.xs,
   },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 80,
+    paddingVertical: Spacing.xxl * 2,
   },
   emptyText: {
-    fontSize: 16,
-    opacity: 0.5,
+    ...Typography.body,
+    textAlign: 'center',
+  },
+  footerContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.lg,
+  },
+  shareButton: {
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.medium,
+    alignItems: 'center',
+    ...Shadow.medium,
+  },
+  shareButtonText: {
+    color: '#FFFFFF',
+    ...Typography.bodyMedium,
   },
 }); 

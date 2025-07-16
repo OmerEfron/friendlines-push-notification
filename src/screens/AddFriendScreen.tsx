@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,20 +10,23 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import database from '../services/database';
 import { Colors, Spacing, Typography, BorderRadius } from '../constants/theme';
 import { validateEmail } from '../utils/helpers';
-import { User } from '../types';
+import { User, FriendRequest } from '../types';
 
 interface AddFriendScreenProps {
   isDarkMode: boolean;
 }
 
 export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) => {
+  const navigation = useNavigation<any>();
   const [searchText, setSearchText] = useState('');
   const [searchType, setSearchType] = useState<'username' | 'email'>('username');
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   const colors = isDarkMode ? Colors.dark : Colors.light;
 
@@ -34,16 +37,21 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
   const loadCurrentUser = async () => {
     const user = await database.getCurrentUser();
     setCurrentUser(user);
+    if (user) {
+      const requests = await database.getFriendRequests(user.id);
+      const pendingCount = requests.filter(r => r.toUserId === user.id && r.status === 'pending').length;
+      setPendingRequestsCount(pendingCount);
+    }
   };
 
   const handleSearch = async () => {
     if (!searchText.trim()) {
-      Alert.alert('Required', 'Please enter a username or email');
+      Alert.alert('Oops! 😊', 'Please enter a username or email');
       return;
     }
 
     if (searchType === 'email' && !validateEmail(searchText)) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address');
+      Alert.alert('Invalid Email 📧', 'Please enter a valid email address');
       return;
     }
 
@@ -59,17 +67,17 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
       }
 
       if (!foundUser) {
-        Alert.alert('Not Found', `No journalist found with that ${searchType}`);
+        Alert.alert('Not Found', `No friend found with that ${searchType}`);
         return;
       }
 
       if (foundUser.id === currentUser?.id) {
-        Alert.alert('Invalid', "You can't connect with yourself");
+        Alert.alert('Silly! 😄', "You can't connect with yourself!");
         return;
       }
 
       if (currentUser?.friends?.includes(foundUser.id)) {
-        Alert.alert('Already Connected', `You're already connected with ${foundUser.displayName}`);
+        Alert.alert('Already Friends! 🤝', `You're already friends with ${foundUser.displayName}`);
         return;
       }
 
@@ -82,38 +90,38 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
 
       if (existingRequest) {
         if (existingRequest.status === 'pending') {
-          Alert.alert('Pending', 'A connection request is already pending');
+          Alert.alert('Waiting! ⏳', 'A friend request is already pending');
         } else {
-          Alert.alert('Exists', 'A connection request already exists');
+          Alert.alert('Already Sent! 📬', 'A friend request already exists');
         }
         return;
       }
 
       // Show confirmation
       Alert.alert(
-        'Send Connection Request',
-        `Connect with ${foundUser.displayName} (@${foundUser.username})?`,
+        'Send Friend Request? 🤝',
+        `Want to be friends with ${foundUser.displayName} (@${foundUser.username})?`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
-            text: 'Send Request',
+            text: 'Send Request! 🚀',
             onPress: async () => {
               try {
                 await database.createFriendRequest(currentUser!.id, foundUser!.id);
                 Alert.alert(
-                  'Request Sent',
-                  `Connection request sent to ${foundUser!.displayName}`,
-                  [{ text: 'OK', onPress: () => setSearchText('') }]
+                  'Request Sent! 🎉',
+                  `Friend request sent to ${foundUser!.displayName}`,
+                  [{ text: 'Awesome!', onPress: () => setSearchText('') }]
                 );
               } catch (error: any) {
-                Alert.alert('Error', error.message || 'Failed to send request');
+                Alert.alert('Oops! 😅', error.message || 'Failed to send request');
               }
             },
           },
         ]
       );
     } catch (error) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      Alert.alert('Oops! 😅', 'Something went wrong. Please try again!');
     } finally {
       setIsLoading(false);
     }
@@ -127,11 +135,23 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Build Your Network</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Find Your Squad</Text>
           <Text style={[styles.subtitle, { color: colors.text }]}>
-            Connect with journalists and expand your news sources
+            Connect with awesome people and grow your friend circle! 🌟
           </Text>
         </View>
+
+        {/* Friend Requests Button */}
+        {pendingRequestsCount > 0 && (
+          <TouchableOpacity
+            style={[styles.requestsButton, { backgroundColor: colors.accent }]}
+            onPress={() => navigation.navigate('FriendRequests')}
+          >
+            <Text style={styles.requestsButtonText}>
+              {pendingRequestsCount} Pending Friend Request{pendingRequestsCount > 1 ? 's' : ''} 🔔
+            </Text>
+          </TouchableOpacity>
+        )}
         
         {/* Search Type Tabs */}
         <View style={styles.tabs}>
@@ -207,27 +227,21 @@ export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ isDarkMode }) 
 
         {/* Info Cards */}
         <View style={[styles.infoCard, { backgroundColor: colors.secondary }]}>
-          <Text style={styles.infoIcon}>🌐</Text>
+          <Text style={styles.infoIcon}>🎉</Text>
           <Text style={[styles.infoTitle, { color: colors.text }]}>
-            Why Build a Network?
+            Why Find Friends?
           </Text>
           <View style={styles.infoList}>
             <Text style={[styles.infoItem, { color: colors.text }]}>
-              • Get breaking news from trusted sources
+              • Get fun updates from your favorite people
             </Text>
             <Text style={[styles.infoItem, { color: colors.text }]}>
-              • Share your headlines with specific journalists
+              • Share your thoughts with specific friends
             </Text>
             <Text style={[styles.infoItem, { color: colors.text }]}>
-              • Create your personal news ecosystem
+              • Build your awesome friend circle
             </Text>
           </View>
-        </View>
-
-        <View style={[styles.tipCard, { backgroundColor: colors.muted }]}>
-          <Text style={[styles.tipText, { color: colors.text }]}>
-            💡 <Text style={styles.tipBold}>Pro tip:</Text> Start by connecting with journalists in your field of interest
-          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -338,6 +352,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tipBold: {
+    fontWeight: '600',
+  },
+  requestsButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    marginBottom: Spacing.lg,
+    alignItems: 'center',
+  },
+  requestsButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
 }); 

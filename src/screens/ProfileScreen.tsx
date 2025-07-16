@@ -8,20 +8,29 @@ import {
   ScrollView,
   Alert,
   FlatList,
+  Image,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, RouteProp, NavigationProp } from '@react-navigation/native';
+import { launchImageLibrary, ImagePickerResponse, MediaType, ImageLibraryOptions } from 'react-native-image-picker';
 import database from '../services/database';
 import { NewsflashCard } from '../components/NewsflashCard';
-import { Colors, Spacing, Typography, BorderRadius } from '../constants/theme';
+import { Colors, Spacing, Typography, BorderRadius, Shadow } from '../constants/theme';
 import { User, Group, Newsflash } from '../types';
 
 interface ProfileScreenProps {
   isDarkMode: boolean;
+  route?: RouteProp<any>;
+  navigation?: NavigationProp<any>;
 }
 
-export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
-  const route = useRoute<any>();
-  const navigation = useNavigation();
+export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode, route: propRoute, navigation: propNavigation }) => {
+  const navRoute = useRoute<any>();
+  const navNavigation = useNavigation();
+  
+  // Use prop route/navigation if provided, otherwise use hooks
+  const route = propRoute || navRoute;
+  const navigation = propNavigation || navNavigation;
+  
   const userId = route.params?.userId;
   const isCurrentUser = route.params?.isCurrentUser || false;
 
@@ -48,17 +57,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
       profileUser = current;
     } else if (userId) {
       profileUser = await database.getUser(userId);
+    } else if (!isCurrentUser && !userId && current) {
+      profileUser = current;
     }
 
     if (profileUser) {
       setUser(profileUser);
       setBio(profileUser.bio);
 
-      // Load user's newsflashes
       const userNewsflashes = await database.getNewsflashesForUser(profileUser.id);
       setNewsflashes(userNewsflashes.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
 
-      // Load groups and users for newsflash display
       const allGroups = await database.getGroups();
       const users = await database.getUsers();
       setGroups(allGroups);
@@ -77,6 +86,49 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
     } catch (error) {
       Alert.alert('Error', 'Failed to update bio');
     }
+  };
+
+  const pickProfilePicture = async () => {
+    if (!isCurrentUser) return;
+
+    const options: ImageLibraryOptions = {
+      mediaType: 'photo' as MediaType,
+      quality: 0.8 as any,
+      includeBase64: false,
+      maxWidth: 500,
+      maxHeight: 500,
+    };
+
+    launchImageLibrary(options, (response: ImagePickerResponse) => {
+      if (response.didCancel) {
+        return;
+      }
+      
+      if (response.errorCode) {
+        if (response.errorCode === 'permission') {
+          Alert.alert(
+            'Permission Needed',
+            'Please allow access to your photos in Settings to change your profile picture.'
+          );
+        } else {
+          Alert.alert('Error', 'Failed to pick image');
+        }
+        return;
+      }
+
+      if (response.assets && response.assets[0]) {
+        const imageUri = response.assets[0].uri;
+        if (imageUri) {
+          try {
+            database.updateUser(user!.id, { profilePicture: imageUri });
+            setUser({ ...user!, profilePicture: imageUri });
+            Alert.alert('Success', 'Profile picture updated successfully');
+          } catch (error) {
+            Alert.alert('Error', 'Failed to update profile picture');
+          }
+        }
+      }
+    });
   };
 
   const handleLogout = () => {
@@ -103,12 +155,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
   const renderNewsflash = ({ item }: { item: Newsflash }) => {
     if (!user) return null;
 
-    // Find groups that this newsflash was sent to
     const itemGroups = groups.filter(g => 
       item.recipients.some(recipientId => g.members.includes(recipientId))
     );
     
-    // Find individual friends this was sent to
     const itemFriends = allUsers.filter(u => 
       item.recipients.includes(u.id)
     );
@@ -138,49 +188,103 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
       contentContainerStyle={styles.content}
     >
       {/* Profile Header */}
-      <View style={[styles.header, { backgroundColor: colors.secondary }]}>
-        <Text style={styles.avatar}>👤</Text>
+      <View style={[styles.header, { backgroundColor: colors.cardBackground }]}>
+        <TouchableOpacity 
+          onPress={isCurrentUser ? pickProfilePicture : undefined} 
+          disabled={!isCurrentUser}
+          style={styles.profilePictureContainer}
+        >
+          {user.profilePicture ? (
+            <Image source={{ uri: user.profilePicture }} style={styles.profilePicture} />
+          ) : (
+            <View style={[styles.avatarContainer, { backgroundColor: colors.accent }]}>
+              <Text style={styles.avatarText}>
+                {user.displayName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
+          {isCurrentUser && (
+            <View style={styles.editProfilePictureOverlay}>
+              <Text style={styles.editProfilePictureText}>📷</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        
         <View style={styles.headerInfo}>
           <Text style={[styles.name, { color: colors.text }]}>{user.displayName}</Text>
-          <Text style={[styles.username, { color: colors.text }]}>@{user.username}</Text>
+          <Text style={[styles.username, { color: colors.secondaryText }]}>@{user.username}</Text>
+          
           {!isEditingBio ? (
-            <Text style={[styles.bio, { color: colors.text }]}>{user.bio || 'No bio yet'}</Text>
+            <Text style={[styles.bio, { color: colors.text }]}>
+              {user.bio || 'No bio yet'}
+            </Text>
           ) : (
-            <TextInput
-              style={[
-                styles.bioInput,
-                {
-                  backgroundColor: colors.muted,
-                  color: colors.text,
-                  borderColor: colors.border,
-                },
-              ]}
-              value={bio}
-              onChangeText={setBio}
-              placeholder="Enter your bio"
-              placeholderTextColor={colors.text + '80'}
-              maxLength={60}
-              multiline
-            />
+            <View style={styles.bioEditContainer}>
+              <TextInput
+                style={[
+                  styles.bioInput,
+                  {
+                    backgroundColor: colors.background,
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
+                value={bio}
+                onChangeText={setBio}
+                placeholder="Enter your bio"
+                placeholderTextColor={colors.secondaryText}
+                maxLength={120}
+                multiline
+              />
+              <Text style={[styles.bioCharCount, { color: colors.secondaryText }]}>
+                {bio.length}/120
+              </Text>
+            </View>
           )}
         </View>
       </View>
 
-      {/* Bio Edit Button */}
-      {isCurrentUser && (
-        <TouchableOpacity
-          style={[styles.editButton, { backgroundColor: colors.accent }]}
-          onPress={isEditingBio ? handleSaveBio : () => setIsEditingBio(true)}
-        >
-          <Text style={styles.editButtonText}>
-            {isEditingBio ? 'Save Bio' : 'Edit Bio'}
+      {/* Action Buttons */}
+      <View style={styles.actionButtons}>
+        {isCurrentUser && (
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.accent }]}
+            onPress={isEditingBio ? handleSaveBio : () => setIsEditingBio(true)}
+          >
+            <Text style={styles.actionButtonText}>
+              {isEditingBio ? 'Save Bio' : 'Edit Bio'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Stats */}
+      <View style={[styles.statsContainer, { backgroundColor: colors.cardBackground }]}>
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: colors.text }]}>
+            {newsflashes.length}
           </Text>
-        </TouchableOpacity>
-      )}
+          <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Posts</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: colors.text }]}>
+            {user.friends?.length || 0}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Friends</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: colors.text }]}>
+            {user.groups?.length || 0}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.secondaryText }]}>Groups</Text>
+        </View>
+      </View>
 
       {/* Groups */}
       {user.groups && user.groups.length > 0 && (
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.cardBackground }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Groups</Text>
           <View style={styles.groupList}>
             {user.groups.map(gid => {
@@ -189,9 +293,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
               return (
                 <View
                   key={group.id}
-                  style={[styles.groupChip, { backgroundColor: colors.primary }]}
+                  style={[styles.groupChip, { backgroundColor: colors.accent + '20' }]}
                 >
-                  <Text style={styles.groupChipText}>{group.name}</Text>
+                  <Text style={[styles.groupChipText, { color: colors.accent }]}>
+                    {group.name}
+                  </Text>
                 </View>
               );
             })}
@@ -199,43 +305,25 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ isDarkMode }) => {
         </View>
       )}
 
-      {/* Stats */}
-      <View style={styles.stats}>
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.text }]}>
-            {newsflashes.length}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.text }]}>Newsflashes</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.text }]}>
-            {user.friends?.length || 0}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.text }]}>Friends</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.text }]}>
-            {user.groups?.length || 0}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.text }]}>Groups</Text>
-        </View>
-      </View>
-
-      {/* User's Newsflashes */}
-      <View style={styles.section}>
+      {/* User's Posts */}
+      <View style={[styles.section, { backgroundColor: colors.cardBackground }]}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          {isCurrentUser ? 'My Newsflashes' : 'Newsflashes'}
+          {isCurrentUser ? 'My Posts' : 'Posts'}
         </Text>
         {newsflashes.length === 0 ? (
-          <Text style={[styles.emptyText, { color: colors.text }]}>
-            No newsflashes yet
-          </Text>
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+              No posts yet! Share something fun! 🎉
+            </Text>
+          </View>
         ) : (
-          newsflashes.map(item => (
-            <View key={item.id}>
-              {renderNewsflash({ item })}
-            </View>
-          ))
+          <View style={styles.postsContainer}>
+            {newsflashes.map(item => (
+              <View key={item.id} style={styles.postItem}>
+                {renderNewsflash({ item })}
+              </View>
+            ))}
+          </View>
         )}
       </View>
 
@@ -265,12 +353,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: Spacing.lg,
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
+    marginBottom: Spacing.md,
+    borderRadius: BorderRadius.large,
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.lg,
+    ...Shadow.small,
   },
-  avatar: {
-    fontSize: 64,
-    marginRight: Spacing.md,
+  profilePictureContainer: {
+    position: 'relative',
+    marginRight: Spacing.lg,
+  },
+  profilePicture: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  avatarContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: '600',
+  },
+  editProfilePictureOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: BorderRadius.round,
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editProfilePictureText: {
+    fontSize: 14,
   },
   headerInfo: {
     flex: 1,
@@ -281,35 +403,77 @@ const styles = StyleSheet.create({
   },
   username: {
     ...Typography.body,
-    opacity: 0.7,
     marginBottom: Spacing.sm,
   },
   bio: {
-    ...Typography.caption,
+    ...Typography.body,
+    lineHeight: 20,
+  },
+  bioEditContainer: {
+    flex: 1,
   },
   bioInput: {
     borderWidth: 1,
-    borderRadius: BorderRadius.small,
-    padding: Spacing.sm,
-    marginTop: Spacing.xs,
-    minHeight: 50,
+    borderRadius: BorderRadius.medium,
+    padding: Spacing.md,
+    minHeight: 60,
+    fontSize: 16,
+    textAlignVertical: 'top',
   },
-  editButton: {
-    margin: Spacing.md,
-    padding: Spacing.sm,
+  bioCharCount: {
+    ...Typography.caption,
+    textAlign: 'right',
+    marginTop: Spacing.xs,
+  },
+  actionButtons: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  actionButton: {
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     borderRadius: BorderRadius.medium,
     alignItems: 'center',
+    ...Shadow.small,
   },
-  editButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+  actionButtonText: {
+    color: '#FFFFFF',
+    ...Typography.bodyMedium,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    paddingVertical: Spacing.lg,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderRadius: BorderRadius.large,
+    ...Shadow.small,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: Colors.light.border,
+    marginVertical: Spacing.sm,
+  },
+  statValue: {
+    ...Typography.h2,
+    marginBottom: Spacing.xs,
+  },
+  statLabel: {
+    ...Typography.caption,
   },
   section: {
-    padding: Spacing.md,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.large,
+    ...Shadow.small,
   },
   sectionTitle: {
-    ...Typography.h3,
-    marginBottom: Spacing.sm,
+    ...Typography.h4,
+    marginBottom: Spacing.md,
   },
   groupList: {
     flexDirection: 'row',
@@ -317,46 +481,36 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   groupChip: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.round,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.medium,
   },
   groupChipText: {
-    color: '#fff',
-    fontSize: 14,
+    ...Typography.captionMedium,
   },
-  stats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  statItem: {
+  emptyContainer: {
     alignItems: 'center',
-  },
-  statValue: {
-    ...Typography.h2,
-  },
-  statLabel: {
-    ...Typography.caption,
-    opacity: 0.7,
+    paddingVertical: Spacing.xl,
   },
   emptyText: {
     ...Typography.body,
     textAlign: 'center',
-    opacity: 0.6,
-    paddingVertical: Spacing.lg,
+  },
+  postsContainer: {
+    marginTop: Spacing.sm,
+  },
+  postItem: {
+    marginBottom: Spacing.md,
   },
   logoutButton: {
-    margin: Spacing.md,
-    padding: Spacing.md,
+    margin: Spacing.lg,
+    paddingVertical: Spacing.md,
     borderRadius: BorderRadius.medium,
     borderWidth: 1,
     alignItems: 'center',
   },
   logoutButtonText: {
-    fontWeight: 'bold',
+    ...Typography.bodyMedium,
   },
   errorText: {
     ...Typography.body,

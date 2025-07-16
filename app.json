@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Friendlines",
+    "name": "FriendLines",
     "slug": "friendlines-expo",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -23,7 +23,6 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "googleServicesFile": "./google-services.json",
       "package": "com.omerefron.friendlines"
     },
     "web": {
@@ -31,9 +30,8 @@
     },
     "extra": {
       "eas": {
-        "projectId": "bd271d56-0340-41c9-91d8-d9535d8ac2a6"
+        "projectId": "60a8b6d4-8d54-4bb2-beb7-c1b8c0b7e8a4"
       }
-    },
-    "owner": "omerefron"
+    }
   }
 }

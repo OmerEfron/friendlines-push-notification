@@ -9,7 +9,9 @@ import { FeedScreen } from '../screens/FeedScreen';
 import { CreateNewsflashScreen } from '../screens/CreateNewsflashScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { AddFriendScreen } from '../screens/AddFriendScreen';
-import { Colors } from '../constants/theme';
+import { FriendRequestsScreen } from '../screens/FriendRequestsScreen';
+import { CommentsScreen } from '../screens/CommentsScreen';
+import { Colors, Spacing, Typography, Shadow } from '../constants/theme';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -29,7 +31,9 @@ const TabIcon = ({ name, focused, color }: { name: string; focused: boolean; col
   
   return (
     <View style={{ alignItems: 'center' }}>
-      <Text style={{ fontSize: focused ? 22 : 18 }}>{icons[name] || '❓'}</Text>
+      <Text style={{ fontSize: focused ? 24 : 20, marginBottom: 2 }}>
+        {icons[name] || '❓'}
+      </Text>
     </View>
   );
 };
@@ -45,25 +49,22 @@ const MainTabs = ({ isDarkMode, onNewsflashCreated }: AppNavigatorProps) => {
           <TabIcon name={route.name} focused={focused} color={color} />
         ),
         tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.text + '60',
+        tabBarInactiveTintColor: colors.secondaryText,
         tabBarStyle: {
-          backgroundColor: colors.secondary,
+          backgroundColor: colors.cardBackground,
           borderTopColor: colors.border,
-          height: Platform.OS === 'ios' ? 60 + insets.bottom : 56 + insets.bottom,
-          paddingBottom: insets.bottom,
-          paddingTop: 5,
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 3,
+          height: 60 + (insets.bottom > 0 ? insets.bottom : 0),
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+          paddingTop: 8,
+          ...Shadow.medium,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
+          ...Typography.small,
           fontWeight: '600',
           marginTop: -2,
         },
         headerShown: false,
+        tabBarHideOnKeyboard: true,
       })}
     >
       <Tab.Screen 
@@ -90,8 +91,9 @@ const MainTabs = ({ isDarkMode, onNewsflashCreated }: AppNavigatorProps) => {
       <Tab.Screen 
         name="Profile" 
         options={{ title: 'Profile' }}
+        initialParams={{ isCurrentUser: true }}
       >
-        {() => <ProfileScreen isDarkMode={isDarkMode} />}
+        {(props) => <ProfileScreen isDarkMode={isDarkMode} route={props.route} navigation={props.navigation} />}
       </Tab.Screen>
     </Tab.Navigator>
   );
@@ -105,7 +107,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ isDarkMode, onNewsfl
       <Stack.Navigator
         screenOptions={{
           headerStyle: {
-            backgroundColor: colors.secondary,
+            backgroundColor: colors.cardBackground,
             elevation: 0,
             shadowOpacity: 0,
             borderBottomWidth: 1,
@@ -113,12 +115,18 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ isDarkMode, onNewsfl
           },
           headerTintColor: colors.text,
           headerTitleStyle: {
-            fontWeight: '700',
-            fontSize: 18,
+            ...Typography.h4,
+            color: colors.text,
+          },
+          headerBackTitleStyle: {
+            ...Typography.body,
+            color: colors.accent,
           },
           cardStyle: {
             backgroundColor: colors.background,
           },
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
         }}
       >
         <Stack.Screen 
@@ -141,7 +149,27 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ isDarkMode, onNewsfl
             headerBackTitle: 'Back',
           }}
         >
-          {() => <ProfileScreen isDarkMode={isDarkMode} />}
+          {(props) => <ProfileScreen isDarkMode={isDarkMode} route={props.route} navigation={props.navigation} />}
+        </Stack.Screen>
+        
+        <Stack.Screen 
+          name="FriendRequests" 
+          options={{ 
+            title: 'Friend Requests',
+            headerBackTitle: 'Back',
+          }}
+        >
+          {() => <FriendRequestsScreen isDarkMode={isDarkMode} />}
+        </Stack.Screen>
+        
+        <Stack.Screen 
+          name="Comments" 
+          options={{ 
+            title: 'Comments',
+            headerBackTitle: 'Back',
+          }}
+        >
+          {() => <CommentsScreen isDarkMode={isDarkMode} />}
         </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>

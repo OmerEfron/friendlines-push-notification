@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Spacing, Typography, BorderRadius } from '../constants/theme';
+import { Colors, Spacing, Typography, BorderRadius, Shadow } from '../constants/theme';
 import { Newsflash, User, Group } from '../types';
 import { timeAgo } from '../utils/helpers';
 
@@ -12,6 +12,8 @@ interface NewsflashCardProps {
   friends?: User[];
   isDarkMode: boolean;
   isFeatured?: boolean;
+  onLike?: () => void;
+  onComment?: () => void;
 }
 
 export const NewsflashCard: React.FC<NewsflashCardProps> = ({
@@ -21,177 +23,215 @@ export const NewsflashCard: React.FC<NewsflashCardProps> = ({
   friends = [],
   isDarkMode,
   isFeatured = false,
+  onLike,
+  onComment,
 }) => {
   const navigation = useNavigation<any>();
   const colors = isDarkMode ? Colors.dark : Colors.light;
 
   const handlePress = () => {
+    navigation.navigate('Comments', { newsflashId: newsflash.id });
+  };
+
+  const handleAuthorPress = () => {
     navigation.navigate('Profile', { userId: author.id });
   };
 
-  // For featured/top article
-  if (isFeatured) {
-    return (
-      <TouchableOpacity 
-        style={[styles.featuredContainer, { backgroundColor: colors.secondary }]}
-        onPress={handlePress}
-        activeOpacity={0.7}
-      >
+  const handleShare = () => {
+    // Handle share functionality
+    console.log('Share newsflash:', newsflash.id);
+  };
+
+  return (
+    <View style={[styles.cardContainer, { backgroundColor: colors.cardBackground }]}>
+      {/* Post Image */}
+      {newsflash.image && (
         <Image
-          source={{ uri: newsflash.image || `https://source.unsplash.com/600x300/?news,breaking,${newsflash.id}` }}
-          style={styles.featuredImage}
+          source={{ uri: newsflash.image }}
+          style={styles.postImage}
+          resizeMode="cover"
         />
-        <View style={styles.featuredContent}>
-          {groups.length > 0 && (
-            <Text style={[styles.featuredCategory, { color: colors.primary }]}>
+      )}
+
+      {/* Card Content */}
+      <View style={styles.cardContent}>
+        {/* Category/Group Tag */}
+        {groups.length > 0 && (
+          <View style={[styles.categoryTag, { backgroundColor: colors.accent + '20' }]}>
+            <Text style={[styles.categoryText, { color: colors.accent }]}>
               {groups[0].name.toUpperCase()}
             </Text>
-          )}
-          <Text style={[styles.featuredHeadline, { color: colors.text }]}>
+          </View>
+        )}
+
+        {/* Post Title/Content */}
+        <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
+          <Text style={[styles.postTitle, { color: colors.text }]}>
             {newsflash.content}
           </Text>
-          <View style={styles.featuredMeta}>
-            <Text style={[styles.featuredAuthor, { color: colors.text }]}>
-              {author.displayName}
-            </Text>
-            <Text style={[styles.featuredTime, { color: colors.text }]}>
-              {timeAgo(newsflash.createdAt.getTime())}
-            </Text>
-          </View>
+        </TouchableOpacity>
+
+        {/* Author and Time */}
+        <View style={styles.authorSection}>
+          <TouchableOpacity 
+            onPress={handleAuthorPress} 
+            activeOpacity={0.7}
+            style={styles.authorInfo}
+          >
+            <View style={[styles.authorAvatar, { backgroundColor: colors.accent }]}>
+              <Text style={styles.authorAvatarText}>
+                {author.displayName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.authorDetails}>
+              <Text style={[styles.authorName, { color: colors.text }]}>
+                {author.displayName}
+              </Text>
+              <Text style={[styles.postTime, { color: colors.secondaryText }]}>
+                {timeAgo(newsflash.createdAt.getTime())}
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
-      </TouchableOpacity>
-    );
-  }
 
-  // Compact news card (Ynet style)
-  return (
-    <TouchableOpacity 
-      style={[styles.compactContainer, { backgroundColor: colors.secondary }]}
-      onPress={handlePress}
-      activeOpacity={0.7}
-    >
-      {/* Content area */}
-      <View style={styles.compactContent}>
-        {/* Category label at top */}
-        {groups.length > 0 && (
-          <Text style={[styles.compactCategory, { color: colors.primary }]}>
-            {groups[0].name.toUpperCase()}
-          </Text>
-        )}
-        
-        {/* Headline */}
-        <Text 
-          style={[styles.compactHeadline, { color: colors.text }]}
-          numberOfLines={3}
-        >
-          {newsflash.content}
-        </Text>
-
-        {/* Bottom row with author and time */}
-        <View style={styles.compactMeta}>
-          <Text style={[styles.compactAuthor, { color: colors.text }]}>
-            {author.displayName}
-          </Text>
-          <Text style={[styles.compactTime, { color: colors.text }]}>
-            {timeAgo(newsflash.createdAt.getTime())}
-          </Text>
+        {/* Action Buttons */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: colors.background }]}
+            onPress={onLike}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionIcon}>❤️</Text>
+            <Text style={[styles.actionText, { color: colors.text }]}>
+              Like
+            </Text>
+            {newsflash.likes > 0 && (
+              <Text style={[styles.actionCount, { color: colors.secondaryText }]}>
+                {newsflash.likes}
+              </Text>
+            )}
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: colors.background }]}
+            onPress={handleShare}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionIcon}>📤</Text>
+            <Text style={[styles.actionText, { color: colors.text }]}>
+              Share
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: colors.background }]}
+            onPress={onComment}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionIcon}>💬</Text>
+            <Text style={[styles.actionText, { color: colors.text }]}>
+              Comment
+            </Text>
+            {newsflash.comments > 0 && (
+              <Text style={[styles.actionCount, { color: colors.secondaryText }]}>
+                {newsflash.comments}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
-
-      {/* Small thumbnail on the right */}
-      <Image
-        source={{ uri: newsflash.image || `https://source.unsplash.com/120x80/?news,${newsflash.id}` }}
-        style={styles.compactThumbnail}
-      />
-    </TouchableOpacity>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  // Featured article styles
-  featuredContainer: {
-    marginBottom: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
+  cardContainer: {
+    marginHorizontal: Spacing.lg,
+    marginVertical: Spacing.sm,
+    borderRadius: BorderRadius.large,
     overflow: 'hidden',
+    ...Shadow.medium,
   },
-  featuredImage: {
+  postImage: {
     width: '100%',
-    height: 180,
+    height: 200,
   },
-  featuredContent: {
-    padding: 12,
+  cardContent: {
+    padding: Spacing.lg,
   },
-  featuredCategory: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    marginBottom: 4,
+  categoryTag: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.small,
+    marginBottom: Spacing.sm,
   },
-  featuredHeadline: {
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 22,
-    marginBottom: 6,
+  categoryText: {
+    ...Typography.small,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
-  featuredMeta: {
+  postTitle: {
+    ...Typography.h4,
+    marginBottom: Spacing.lg,
+    lineHeight: 24,
+  },
+  authorSection: {
+    marginBottom: Spacing.lg,
+  },
+  authorInfo: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  featuredAuthor: {
-    fontSize: 12,
-    opacity: 0.7,
+  authorAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.sm,
   },
-  featuredTime: {
-    fontSize: 11,
-    opacity: 0.6,
-  },
-
-  // Compact card styles (Ynet-like)
-  compactContainer: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
-    minHeight: 100,
-  },
-  compactContent: {
-    flex: 1,
-    paddingRight: 12,
-    justifyContent: 'space-between',
-  },
-  compactCategory: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    marginBottom: 2,
-  },
-  compactHeadline: {
-    fontSize: 15,
+  authorAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
-    lineHeight: 20,
-    marginBottom: 4,
+  },
+  authorDetails: {
     flex: 1,
   },
-  compactMeta: {
+  authorName: {
+    ...Typography.bodyMedium,
+  },
+  postTime: {
+    ...Typography.caption,
+    marginTop: 2,
+  },
+  actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 4,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.light.border,
   },
-  compactAuthor: {
-    fontSize: 11,
-    opacity: 0.6,
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.small,
+    marginHorizontal: Spacing.xs,
   },
-  compactTime: {
-    fontSize: 11,
-    opacity: 0.5,
+  actionIcon: {
+    fontSize: 16,
+    marginRight: Spacing.xs,
   },
-  compactThumbnail: {
-    width: 120,
-    height: 80,
-    borderRadius: 4,
-    backgroundColor: '#f0f0f0',
+  actionText: {
+    ...Typography.captionMedium,
+  },
+  actionCount: {
+    ...Typography.caption,
+    marginLeft: Spacing.xs,
   },
 }); 

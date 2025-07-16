@@ -4,7 +4,7 @@ A mobile news platform built with React Native and Expo, designed to look and fe
 
 ## Features
 
-- **News Website UI**: Professional news site layout with featured articles and compact news cards (Ynet-style)
+- **News Website UI**: Professional news site layout with featured articles and compact news cards 
 - **Headline Publishing**: Write and publish news headlines (180 characters max)
 - **News Sections**: Organize content by sections (Friends, Work, etc.)
 - **Journalist Network**: Connect with other journalists by username or email
@@ -30,7 +30,24 @@ A mobile news platform built with React Native and Expo, designed to look and fe
 npm install
 ```
 
-2. Start the development server:
+### Connecting to the Backend
+
+This frontend requires a running instance of the `friendlines-backend`.
+
+1.  **Set up the backend**: Follow the instructions in the `friendlines-backend` repository's `README.md` to get the backend server running.
+
+2.  **Configure the API URL**: Create a `.env` file in the root of this project by copying the example file:
+    ```bash
+    cp env.example .env
+    ```
+
+3.  **Update the API URL**: Open the `.env` file and update the `EXPO_PUBLIC_API_URL` to point to your backend.
+    *   If you are running the backend locally and using an Android emulator, you can often use `http://10.0.2.2:3000/api/v1`.
+    *   If you are using a physical device with Expo Go, you will need to use a tool like `ngrok` to expose your local backend. Follow the instructions in the backend's `README.md` to set up `ngrok` and get your public URL.
+
+### Running the Frontend
+
+1. Start the development server:
 ```bash
 npm start
 # or
