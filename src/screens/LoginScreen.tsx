@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import database from '../services/database';
-import { Colors, Spacing, Typography, BorderRadius } from '../constants/theme';
+import { Colors, Spacing, Typography, BorderRadius, Shadow } from '../constants/theme';
 import { validateEmail, getRandomAvatar } from '../utils/helpers';
 
 export const LoginScreen: React.FC = () => {
@@ -65,6 +65,83 @@ export const LoginScreen: React.FC = () => {
     }
   };
 
+  if (isLogin) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.loginContainer}>
+            {/* Logo */}
+            <View style={styles.logoContainer}>
+              <Text style={styles.logoEmoji}>😊</Text>
+              <Text style={styles.logoText}>FriendLines</Text>
+            </View>
+
+            {/* Login Form */}
+            <View style={styles.formContainer}>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Username"
+                  placeholderTextColor={Colors.light.secondaryText}
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Password"
+                  placeholderTextColor={Colors.light.secondaryText}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.loginButton, isLoading && styles.buttonDisabled]}
+                onPress={handleSubmit}
+                disabled={isLoading}
+              >
+                <Text style={styles.loginButtonText}>
+                  {isLoading ? 'Logging In...' : 'Log In'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.signupLink}
+                onPress={() => setIsLogin(false)}
+              >
+                <Text style={styles.signupLinkText}>
+                  Don't have an account? Sign up
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Demo Info */}
+            <View style={styles.demoInfo}>
+              <Text style={styles.demoText}>Demo accounts:</Text>
+              <Text style={styles.demoAccount}>Username: noa</Text>
+              <Text style={styles.demoAccount}>Username: amir</Text>
+              <Text style={styles.demoAccount}>Username: maya</Text>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // Registration Screen
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -74,87 +151,98 @@ export const LoginScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.formContainer}>
-          <Text style={styles.logo}>Friendlines</Text>
-          <Text style={styles.title}>{isLogin ? 'Login' : 'Register'}</Text>
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Username"
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+        <View style={styles.registerContainer}>
+          {/* Header */}
+          <View style={styles.registerHeader}>
+            <Text style={styles.registerTitle}>Create Your Account</Text>
           </View>
 
-          {!isLogin && (
-            <>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Email"
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="email-address"
-                />
-              </View>
-
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Display Name"
-                  value={displayName}
-                  onChangeText={setDisplayName}
-                  autoCorrect={false}
-                />
-              </View>
-            </>
-          )}
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={isLoading}
-          >
-            <Text style={styles.buttonText}>
-              {isLogin ? 'Login' : 'Register'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.toggleLink}
-            onPress={() => setIsLogin(!isLogin)}
-          >
-            <Text style={styles.toggleText}>
-              {isLogin
-                ? "Don't have an account? Register"
-                : 'Already have an account? Login'}
-            </Text>
-          </TouchableOpacity>
-
-          {isLogin && (
-            <View style={styles.demoInfo}>
-              <Text style={styles.demoText}>Demo accounts:</Text>
-              <Text style={styles.demoAccount}>Username: noa</Text>
-              <Text style={styles.demoAccount}>Username: amir</Text>
-              <Text style={styles.demoAccount}>Username: maya</Text>
+          {/* Form */}
+          <View style={styles.formContainer}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Name"
+                placeholderTextColor={Colors.light.secondaryText}
+                value={displayName}
+                onChangeText={setDisplayName}
+                autoCorrect={false}
+              />
             </View>
-          )}
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                placeholderTextColor={Colors.light.secondaryText}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Username"
+                placeholderTextColor={Colors.light.secondaryText}
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor={Colors.light.secondaryText}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+            </View>
+
+            {/* What makes a great friend section */}
+            <View style={styles.friendQualities}>
+              <Text style={styles.friendQualitiesTitle}>What makes a great friend?</Text>
+              <View style={styles.qualityItem}>
+                <Text style={styles.qualityText}>✓ Always there for you</Text>
+              </View>
+              <View style={styles.qualityItem}>
+                <Text style={styles.qualityText}>✓ Makes you laugh</Text>
+              </View>
+              <View style={styles.qualityItem}>
+                <Text style={styles.qualityText}>✓ Supports your dreams</Text>
+              </View>
+              <View style={styles.qualityItem}>
+                <Text style={styles.qualityText}>✓ Shares your interests</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.registerButton, isLoading && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={isLoading}
+            >
+              <Text style={styles.registerButtonText}>
+                {isLoading ? 'Creating Account...' : 'Submit Registration'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.backToLogin}
+              onPress={() => setIsLogin(true)}
+            >
+              <Text style={styles.backToLoginText}>
+                Already have an account? Log in
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -164,83 +252,144 @@ export const LoginScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.muted,
+    backgroundColor: Colors.light.background,
   },
   scrollContent: {
     flexGrow: 1,
+  },
+  loginContainer: {
+    flex: 1,
     justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
   },
-  formContainer: {
-    backgroundColor: Colors.light.secondary,
-    marginHorizontal: Spacing.lg,
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.large,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: Spacing.xxl * 2,
   },
-  logo: {
-    ...Typography.h1,
-    color: Colors.light.accent,
-    textAlign: 'center',
+  logoEmoji: {
+    fontSize: 48,
     marginBottom: Spacing.sm,
   },
-  title: {
-    ...Typography.h2,
-    textAlign: 'center',
-    marginBottom: Spacing.lg,
+  logoText: {
+    ...Typography.h1,
     color: Colors.light.text,
+    fontWeight: '700',
+  },
+  formContainer: {
+    width: '100%',
   },
   inputContainer: {
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   input: {
-    backgroundColor: Colors.light.muted,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.small,
+    backgroundColor: Colors.light.cardBackground,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
     fontSize: 16,
     color: Colors.light.text,
+    ...Shadow.small,
   },
-  button: {
+  loginButton: {
     backgroundColor: Colors.light.accent,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.small,
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.medium,
     alignItems: 'center',
-    marginTop: Spacing.sm,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.xl,
+    ...Shadow.medium,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
-  buttonText: {
-    color: '#fff',
+  loginButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  toggleLink: {
-    marginTop: Spacing.md,
+  signupLink: {
     alignItems: 'center',
   },
-  toggleText: {
+  signupLinkText: {
     color: Colors.light.accent,
-    textDecorationLine: 'underline',
+    fontSize: 16,
+    fontWeight: '500',
   },
   demoInfo: {
-    marginTop: Spacing.xl,
-    padding: Spacing.md,
-    backgroundColor: Colors.light.muted,
-    borderRadius: BorderRadius.small,
+    marginTop: Spacing.xxl,
+    padding: Spacing.lg,
+    backgroundColor: Colors.light.cardBackground,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
   },
   demoText: {
-    ...Typography.caption,
+    ...Typography.captionMedium,
     color: Colors.light.text,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   demoAccount: {
     ...Typography.caption,
+    color: Colors.light.secondaryText,
+    marginBottom: Spacing.xs,
+  },
+  // Registration styles
+  registerContainer: {
+    flex: 1,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xxl * 2,
+  },
+  registerHeader: {
+    alignItems: 'center',
+    marginBottom: Spacing.xxl,
+  },
+  registerTitle: {
+    ...Typography.h2,
     color: Colors.light.text,
-    opacity: 0.7,
+    textAlign: 'center',
+  },
+  friendQualities: {
+    backgroundColor: Colors.light.cardBackground,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    marginBottom: Spacing.xl,
+  },
+  friendQualitiesTitle: {
+    ...Typography.h4,
+    color: Colors.light.text,
+    marginBottom: Spacing.md,
+  },
+  qualityItem: {
+    marginBottom: Spacing.sm,
+  },
+  qualityText: {
+    ...Typography.body,
+    color: Colors.light.text,
+  },
+  registerButton: {
+    backgroundColor: Colors.light.accent,
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.medium,
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+    ...Shadow.medium,
+  },
+  registerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  backToLogin: {
+    alignItems: 'center',
+    marginBottom: Spacing.xxl,
+  },
+  backToLoginText: {
+    color: Colors.light.accent,
+    fontSize: 16,
+    fontWeight: '500',
   },
 }); 

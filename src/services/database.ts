@@ -139,8 +139,14 @@ class DatabaseService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        console.error('Login failed:', error);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.indexOf('application/json') !== -1) {
+          const error = await response.json();
+          console.error('Login failed:', error);
+        } else {
+          const errorText = await response.text();
+          console.error('Login failed with non-JSON response:', errorText);
+        }
         return null;
       }
 
@@ -253,9 +259,16 @@ class DatabaseService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        console.error('Registration failed:', error);
-        throw new Error(error.message || 'Registration failed');
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.indexOf('application/json') !== -1) {
+          const error = await response.json();
+          console.error('Registration failed:', error);
+          throw new Error(error.message || 'Registration failed');
+        } else {
+          const errorText = await response.text();
+          console.error('Registration failed with non-JSON response:', errorText);
+          throw new Error('Registration failed: Invalid server response');
+        }
       }
 
       const data = await response.json();
